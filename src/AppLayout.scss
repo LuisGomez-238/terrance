@@ -5,24 +5,32 @@
   
   .app-container {
     display: flex;
-    flex: 1; // Takes up available space, pushing footer down
+    flex: 1; // Takes up available space between header and footer
     
     .app-content {
       flex: 1;
       padding: 20px;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
+      display: block; // Changed from flex to block to prevent flex alignment issues
+      width: 100%; // Ensure it takes full width
+      
+      // Remove flex properties that might be causing the issue
+      // flex-direction: column;
+      // justify-content: flex-start;
+      // align-items: stretch;
     }
   }
 }
 
+// Comment out or remove the second app-container definition
+// as it's creating conflicts with your main layout
+/* 
 .app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   min-width: 100vw;
-  background-color: #f8fafc; // Slightly lighter, more modern background
+  background-color: #f8fafc;
   color: $text-primary;
   font-family: $font-family-base;
   
@@ -53,6 +61,7 @@
     }
   }
 }
+*/
 
 // Animated transitions for router changes
 .page-transition-enter {
@@ -96,13 +105,11 @@
 
 // Responsive adjustments
 @media (max-width: $breakpoint-md) {
-  .app-container {
-    .main-content {
-      flex-direction: column;
-      
-      .content-area {
-        padding: $spacing-lg;
-      }
+  .app-layout .app-container {
+    flex-direction: column;
+    
+    .app-content {
+      padding: $spacing-lg;
     }
   }
 }
