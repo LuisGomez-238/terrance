@@ -1,0 +1,275 @@
+.sidebar {
+    width: 260px;
+    background-color: white;
+    border-right: 1px solid rgba($kia-silver, 0.15);
+    height: calc(100vh - 70px);
+    position: sticky;
+    top: 70px;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.03);
+    z-index: $z-index-fixed - 1;
+    
+    // Custom scrollbar styling
+    &::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba($kia-silver, 0.3);
+      border-radius: 3px;
+    }
+    
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba($kia-silver, 0.5);
+    }
+    
+    .sidebar-header {
+      padding: $spacing-md $spacing-lg;
+      border-bottom: 1px solid rgba($kia-silver, 0.15);
+      margin-bottom: $spacing-sm;
+      
+      .sidebar-title {
+        font-size: $font-size-sm;
+        color: $text-secondary;
+        font-weight: $font-weight-medium;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0;
+      }
+    }
+    
+    .sidebar-nav {
+      padding: $spacing-md 0;
+      
+      .nav-section {
+        margin-bottom: $spacing-lg;
+        
+        .section-title {
+          padding: 0 $spacing-lg;
+          font-size: 0.75rem;
+          color: $text-tertiary;
+          margin-bottom: $spacing-sm;
+          font-weight: $font-weight-medium;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          
+          li {
+            a {
+              display: flex;
+              align-items: center;
+              padding: $spacing-md $spacing-lg;
+              color: $text-primary;
+              text-decoration: none;
+              transition: all 0.2s ease;
+              margin: 2px $spacing-sm;
+              border-radius: $border-radius;
+              position: relative;
+              overflow: hidden;
+              
+              // Subtle hover animation
+              &:before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 3px;
+                height: 100%;
+                background-color: $kia-red;
+                transform: scaleY(0);
+                transition: transform 0.2s ease;
+              }
+              
+              &:hover {
+                background-color: $bg-light;
+                
+                .material-icons {
+                  color: $kia-red;
+                }
+              }
+              
+              &.active {
+                background-color: rgba($kia-red, 0.08);
+                color: $kia-red;
+                font-weight: $font-weight-semibold;
+                
+                &:before {
+                  transform: scaleY(1);
+                }
+                
+                .material-icons {
+                  color: $kia-red;
+                }
+              }
+              
+              .material-icons {
+                margin-right: $spacing-md;
+                color: $text-secondary;
+                font-size: 1.2rem;
+                transition: color 0.2s ease;
+              }
+              
+              .nav-text {
+                font-weight: $font-weight-medium;
+                font-size: $font-size-sm;
+              }
+              
+              .badge {
+                margin-left: auto;
+                font-size: 0.7rem;
+                background: rgba($kia-red, 0.1);
+                color: $kia-red;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-weight: $font-weight-semibold;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    .sidebar-footer {
+      padding: $spacing-md $spacing-lg;
+      border-top: 1px solid rgba($kia-silver, 0.15);
+      margin-top: auto;
+      
+      .sidebar-collapse {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: $spacing-sm;
+        color: $text-secondary;
+        background: none;
+        border: 1px solid rgba($kia-silver, 0.3);
+        border-radius: $border-radius;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s;
+        
+        &:hover {
+          background-color: $bg-light;
+          color: $text-primary;
+        }
+        
+        .material-icons {
+          font-size: 1.1rem;
+          transition: transform 0.3s;
+        }
+        
+        &.collapsed .material-icons {
+          transform: rotate(180deg);
+        }
+      }
+    }
+    
+    // Collapsed state
+    &.collapsed {
+      width: 70px;
+      
+      .sidebar-header .sidebar-title,
+      .nav-section .section-title,
+      .nav-text,
+      .badge {
+        display: none;
+      }
+      
+      .sidebar-nav ul li a {
+        justify-content: center;
+        padding: $spacing-md;
+        
+        .material-icons {
+          margin-right: 0;
+          font-size: 1.4rem;
+        }
+      }
+    }
+    
+    // Responsive adjustments
+    @media (max-width: $breakpoint-lg) {
+      width: 240px;
+      
+      &.collapsed {
+        width: 60px;
+      }
+    }
+    
+    @media (max-width: $breakpoint-md) {
+      width: 100%;
+      height: auto;
+      max-height: 300px;
+      position: relative;
+      top: 0;
+      border-right: none;
+      border-bottom: 1px solid rgba($kia-silver, 0.15);
+      
+      &.collapsed {
+        max-height: 60px;
+        overflow: hidden;
+      }
+    }
+}
+
+// Main content adjustment when sidebar is collapsed
+.sidebar.collapsed + .content-area {
+  margin-left: 70px;
+  transition: margin-left 0.3s ease;
+}
+
+// Dark mode styles
+.dark-mode .sidebar {
+  background-color: $bg-dark;
+  border-color: rgba(255, 255, 255, 0.1);
+  
+  .sidebar-header {
+    border-color: rgba(255, 255, 255, 0.1);
+    
+    .sidebar-title {
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+  
+  .sidebar-nav {
+    .nav-section .section-title {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    ul li a {
+      color: rgba(255, 255, 255, 0.8);
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+      
+      &.active {
+        background-color: rgba($kia-red, 0.2);
+      }
+      
+      .material-icons {
+        color: rgba(255, 255, 255, 0.6);
+      }
+    }
+  }
+}
+
+.main-content {
+  display: flex;
+  height: calc(100vh - 70px);
+  
+  .content-area {
+    flex: 1;
+    padding: $spacing-xl;
+    overflow-y: auto;
+  }
+}

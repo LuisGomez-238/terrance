@@ -1,0 +1,346 @@
+.dashboard-container {
+    padding: $spacing-xl;
+    
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: $spacing-xl;
+      
+      h1 {
+        font-size: $font-size-xxl;
+        color: $text-primary;
+        margin: 0;
+        font-weight: 700;
+        position: relative;
+        
+        &:after {
+          content: '';
+          position: absolute;
+          left: 0;
+          bottom: -8px;
+          height: 4px;
+          width: 40px;
+          background: linear-gradient(90deg, $kia-red, lighten($kia-red, 10%));
+          border-radius: 2px;
+        }
+      }
+      
+      .dashboard-actions {
+        display: flex;
+        gap: $spacing-md;
+        align-items: center;
+        
+        .month-selector {
+          display: flex;
+          align-items: center;
+          
+          label {
+            margin-right: $spacing-sm;
+            color: $text-secondary;
+            font-size: $font-size-sm;
+          }
+          
+          select {
+            padding: $spacing-sm $spacing-md;
+            border-radius: $border-radius-md;
+            border: 1px solid $border-color;
+            background-color: white;
+            font-size: $font-size-sm;
+            color: $text-primary;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+            
+            &:focus {
+              border-color: $kia-red;
+              box-shadow: 0 0 0 2px rgba($kia-red, 0.2);
+            }
+          }
+        }
+        
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          border: none;
+          background-color: white;
+          color: $text-secondary;
+          cursor: pointer;
+          transition: all 0.2s;
+          
+          &:hover {
+            background-color: $kia-red;
+            color: white;
+            transform: rotate(180deg);
+          }
+        }
+      }
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: $spacing-lg;
+      margin-bottom: $spacing-xl;
+      
+      .stat-card {
+        background-color: white;
+        border-radius: $border-radius-lg;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        padding: $spacing-lg;
+        transition: transform 0.2s, box-shadow 0.2s;
+        overflow: hidden;
+        position: relative;
+        
+        &:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .stat-icon {
+          position: absolute;
+          top: $spacing-lg;
+          right: $spacing-lg;
+          font-size: 1.5rem;
+          color: rgba($kia-red, 0.2);
+        }
+        
+        .stat-label {
+          font-size: $font-size-sm;
+          color: $text-secondary;
+          margin-bottom: $spacing-xs;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+          font-size: $font-size-2xl;
+          font-weight: 700;
+          color: $text-primary;
+          margin-bottom: $spacing-sm;
+        }
+        
+        .stat-trend {
+          font-size: $font-size-sm;
+          display: flex;
+          align-items: center;
+          
+          .material-icons {
+            font-size: 1rem;
+            margin-right: $spacing-xs;
+          }
+          
+          &.positive {
+            color: $success;
+          }
+          
+          &.negative {
+            color: $danger;
+          }
+        }
+        
+        .progress-bar {
+          height: 8px;
+          background-color: $bg-light;
+          border-radius: 4px;
+          overflow: hidden;
+          margin-top: $spacing-sm;
+          
+          .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, $kia-red, lighten($kia-red, 15%));
+            border-radius: 4px;
+            transition: width 0.5s ease-out;
+          }
+        }
+      }
+    }
+    
+    .dashboard-charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: $spacing-xl;
+      margin-bottom: $spacing-xl;
+      
+      @media (max-width: $breakpoint-lg) {
+        grid-template-columns: 1fr;
+      }
+      
+      .chart-card {
+        background-color: white;
+        border-radius: $border-radius-lg;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        padding: $spacing-lg;
+        
+        h2 {
+          margin-top: 0;
+          margin-bottom: $spacing-lg;
+          font-size: $font-size-lg;
+          color: $text-primary;
+          display: flex;
+          align-items: center;
+          
+          .chart-icon {
+            margin-right: $spacing-sm;
+            color: $kia-red;
+          }
+        }
+        
+        .chart-container {
+          height: 300px;
+          transition: opacity 0.3s;
+          
+          .chart-placeholder {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            background-color: $bg-light;
+            border-radius: $border-radius-md;
+            color: $text-secondary;
+            font-style: italic;
+          }
+        }
+        
+        .chart-legend {
+          display: flex;
+          justify-content: center;
+          gap: $spacing-md;
+          margin-top: $spacing-md;
+          
+          .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: $font-size-sm;
+            
+            .legend-color {
+              width: 12px;
+              height: 12px;
+              border-radius: 3px;
+              margin-right: $spacing-xs;
+            }
+          }
+        }
+      }
+    }
+    
+    .recent-deals {
+      background-color: white;
+      border-radius: $border-radius-lg;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      padding: $spacing-lg;
+      
+      .recent-deals-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: $spacing-lg;
+        
+        h2 {
+          margin: 0;
+          font-size: $font-size-lg;
+          color: $text-primary;
+        }
+        
+        .view-all {
+          color: $kia-red;
+          font-size: $font-size-sm;
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          
+          &:hover {
+            color: darken($kia-red, 10%);
+          }
+          
+          .arrow-icon {
+            margin-left: $spacing-xs;
+            font-size: 1rem;
+          }
+        }
+      }
+      
+      .deals-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        
+        th {
+          text-align: left;
+          padding: $spacing-sm;
+          color: $text-secondary;
+          font-weight: 500;
+          border-bottom: 1px solid $border-color;
+          font-size: $font-size-sm;
+        }
+        
+        td {
+          padding: $spacing-sm;
+          border-bottom: 1px solid $border-color;
+        }
+        
+        tr {
+          transition: background-color 0.2s;
+          
+          &:hover {
+            background-color: rgba($bg-light, 0.5);
+          }
+          
+          &:last-child td {
+            border-bottom: none;
+          }
+        }
+        
+        .deal-profit {
+          font-weight: 600;
+          text-align: right;
+          
+          &.high {
+            color: $success;
+          }
+          
+          &.medium {
+            color: $warning;
+          }
+          
+          &.low {
+            color: $text-primary;
+          }
+        }
+      }
+    }
+    
+    .dashboard-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 60vh;
+      color: $text-secondary;
+      font-size: $font-size-lg;
+    }
+  }
+
+  @media (max-width: $breakpoint-md) {
+    .dashboard-container {
+      padding: $spacing-md;
+      
+      .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: $spacing-md;
+        
+        .dashboard-actions {
+          width: 100%;
+          justify-content: space-between;
+        }
+      }
+      
+      .dashboard-charts {
+        grid-template-columns: 1fr;
+      }
+    }
+  }

@@ -1,0 +1,310 @@
+.deal-details-container {
+    padding: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    
+    .deal-details-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      
+      .header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        
+        .back-link {
+          color: #4f46e5;
+          text-decoration: none;
+          font-size: 0.9rem;
+          display: inline-flex;
+          align-items: center;
+          
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+        
+        h1 {
+          font-size: 1.8rem;
+          font-weight: 600;
+          margin: 0;
+          color: #1f2937;
+        }
+      }
+      
+      .header-actions {
+        display: flex;
+        gap: 1rem;
+        
+        button {
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          font-size: 0.9rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+        }
+        
+        .edit-btn {
+          background-color: #4f46e5;
+          color: white;
+          border: none;
+          
+          &:hover:not(:disabled) {
+            background-color: #4338ca;
+          }
+        }
+        
+        .delete-btn {
+          background-color: white;
+          color: #ef4444;
+          border: 1px solid #ef4444;
+          
+          &:hover:not(:disabled) {
+            background-color: #fef2f2;
+          }
+        }
+        
+        .save-btn {
+          background-color: #10b981;
+          color: white;
+          border: none;
+          
+          &:hover:not(:disabled) {
+            background-color: #059669;
+          }
+        }
+        
+        .cancel-btn {
+          background-color: white;
+          color: #6b7280;
+          border: 1px solid #d1d5db;
+          
+          &:hover:not(:disabled) {
+            background-color: #f9fafb;
+          }
+        }
+      }
+    }
+    
+    // Form styles
+    .deal-form {
+      .form-row {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        
+        @media (max-width: 768px) {
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+      }
+      
+      .form-section {
+        flex: 1;
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        
+        h2 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0 0 1.25rem 0;
+          color: #1f2937;
+          padding-bottom: 0.75rem;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .form-group {
+          margin-bottom: 1rem;
+          
+          label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #4b5563;
+            margin-bottom: 0.35rem;
+          }
+          
+          input,
+          select,
+          textarea {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            
+            &:focus {
+              outline: none;
+              border-color: #4f46e5;
+              box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            }
+          }
+          
+          select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+          }
+        }
+      }
+      
+      .products-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+        
+        .product-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          
+          label {
+            flex: 1;
+            font-weight: normal;
+            cursor: pointer;
+          }
+          
+          .product-price {
+            width: 5rem;
+          }
+          
+          input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+          }
+        }
+      }
+      
+      .products-total {
+        margin-top: 1.25rem;
+        text-align: right;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      
+      .notes-section {
+        width: 100%;
+        
+        textarea {
+          width: 100%;
+          resize: vertical;
+        }
+      }
+    }
+    
+    // View mode styles
+    .deal-details-content {
+      .details-row {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        
+        @media (max-width: 768px) {
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+      }
+      
+      .details-section {
+        flex: 1;
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        
+        h2 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0 0 1.25rem 0;
+          color: #1f2937;
+          padding-bottom: 0.75rem;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .detail-item {
+          display: flex;
+          margin-bottom: 0.75rem;
+          
+          &.total-item {
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e5e7eb;
+            font-weight: 600;
+          }
+          
+          .detail-label {
+            width: 40%;
+            font-weight: 500;
+            color: #4b5563;
+          }
+          
+          .detail-value {
+            flex: 1;
+            color: #1f2937;
+          }
+        }
+        
+        .no-products {
+          color: #6b7280;
+          font-style: italic;
+        }
+      }
+      
+      .notes-section {
+        width: 100%;
+        
+        .notes-content {
+          white-space: pre-line;
+          line-height: 1.5;
+          color: #1f2937;
+        }
+      }
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 300px;
+      color: #6b7280;
+      font-size: 1.1rem;
+    }
+    
+    .deal-not-found {
+      text-align: center;
+      padding: 3rem 1rem;
+      
+      h2 {
+        font-size: 1.5rem;
+        color: #1f2937;
+        margin-bottom: 1rem;
+      }
+      
+      .back-link {
+        color: #4f46e5;
+        text-decoration: none;
+        
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }

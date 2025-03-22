@@ -1,0 +1,89 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 100vw;
+  background-color: #f8fafc; // Slightly lighter, more modern background
+  color: $text-primary;
+  font-family: $font-family-base;
+  
+  .main-content {
+    display: flex;
+    flex: 1;
+    
+    .content-area {
+      flex: 1;
+      padding: $spacing-xl;
+      overflow-y: auto;
+      max-width: 100%;
+      transition: all 0.3s ease;
+      position: relative;
+      
+      // Modern subtle pattern background
+      background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+      background-size: 30px 30px;
+      background-position: 0 0;
+      
+      // Content container with subtle shadow and rounded corners
+      > div {
+        background: white;
+        border-radius: $border-radius-xl;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+      }
+    }
+  }
+}
+
+// Animated transitions for router changes
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+// Modern scrollbar styling
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+// Modern glass effect for sidebar and header
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+// Responsive adjustments
+@media (max-width: $breakpoint-md) {
+  .app-container {
+    .main-content {
+      flex-direction: column;
+      
+      .content-area {
+        padding: $spacing-lg;
+      }
+    }
+  }
+}
