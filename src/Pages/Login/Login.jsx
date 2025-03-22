@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
 import './Login.scss';
+import Footer from '../../Components/Footer/Footer';
 
 function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -183,6 +184,8 @@ function Login() {
           </p>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }

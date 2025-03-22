@@ -1,18 +1,21 @@
+import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Components/Header.jsx/Header';
 import Sidebar from './Components/Sidebar/Sidebar';
+import Footer from './Components/Footer/Footer';
 import './AppLayout.scss';
 
 function AppLayout() {
   return (
-    <div className="app-container">
+    <div className="app-layout">
       <Header />
-      <div className="main-content">
+      <div className="app-container">
         <Sidebar />
-        <main className="content-area">
+        <div className="app-content">
           <Outlet />
-        </main>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }

@@ -1,0 +1,43 @@
+.app-footer {
+  width: 100%;
+  background-color: #fff;
+  border-top: 1px solid #e1e1e1;
+  padding: 12px 0;
+  margin-top: auto; // Pushes footer to bottom when page content is short
+  
+  .footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    max-width: 1280px;
+    margin: 0 auto;
+    
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .copyright {
+      color: #666;
+      font-size: 0.85rem;
+    }
+    
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      
+      a {
+        color: #555;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: color 0.2s ease;
+        
+        &:hover {
+          color: #e42824; // Kia red for hover state
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+} 
