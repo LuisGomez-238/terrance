@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "src": "^/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "^/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "^/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "^/deals/([^/]+)/?$",
+      "dest": "/index.html"
+    },
+    {
+      "src": "^/lenders/([^/]+)/?$",
+      "dest": "/index.html"
+    },
+    {
+      "src": "^/reports",
+      "dest": "/index.html"
+    },
+    {
+      "src": "^/ai-assistant",
+      "dest": "/index.html"
+    },
+    {
+      "src": "^/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
