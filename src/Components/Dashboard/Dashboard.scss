@@ -411,3 +411,68 @@
     }
   }
 }
+
+.edit-target-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 6px;
+  transition: color 0.2s;
+  
+  &:hover {
+    color: $kia-red;
+  }
+  
+  .material-icons {
+    font-size: 16px;
+  }
+}
+
+.edit-target {
+  margin-top: 8px;
+  
+  input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    text-align: center;
+  }
+  
+  .edit-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    gap: 8px;
+    
+    button {
+      background-color: #f0f0f0;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      
+      &:first-child {
+        background-color: #4caf50;
+        color: white;
+        
+        &:hover {
+          background-color: #45a049;
+        }
+      }
+      
+      &:last-child {
+        background-color: #f44336;
+        color: white;
+        
+        &:hover {
+          background-color: #d32f2f;
+        }
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@ import { collection, getDocs, query, where, orderBy, limit, Timestamp, doc, getD
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import { Link } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ReferenceLine } from 'recharts';
 import './Dashboard.scss';
 import { useProfile } from '../../contexts/ProfileContext';
 
@@ -14,6 +14,9 @@ function Dashboard() {
   const profileContext = useProfile();
   const userProfile = profileContext?.userProfile || { monthlyTarget: 10000 };
   const profileLoading = profileContext?.loading || false;
+  
+  // Initialize state for tracking whether the first data load has completed
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   const [stats, setStats] = useState({
     totalDeals: 0,
@@ -52,6 +55,7 @@ function Dashboard() {
 
   // Function to calculate goal progress - adjust based on your business logic
   const calculateGoalProgress = (totalProfit, userGoal = monthlyGoal) => {
+    console.log(`Calculating goal progress: profit=${totalProfit}, goal=${userGoal}`);
     const progress = (totalProfit / userGoal) * 100;
     return Math.min(Math.round(progress), 100); // Cap at 100%
   };
@@ -98,11 +102,11 @@ function Dashboard() {
   };
 
   // Generate profit trend data for the past 6 months
-  const generateProfitTrendData = (allDeals) => {
+  const generateProfitTrendData = (allDeals, goalValue = monthlyGoal) => {
     const trendData = [];
     const currentDate = new Date();
     
-    console.log("Generating profit trend from deals:", allDeals.length);
+    console.log("Generating profit trend with goal:", goalValue);
     
     // Create data for the past 6 months
     for (let i = 5; i >= 0; i--) {
@@ -169,11 +173,11 @@ function Dashboard() {
       
       console.log(`Month: ${monthName} ${year}, Deals: ${monthDeals.length}, Profit: ${totalProfit}`);
       
-      // Add to trend data
+      // Add to trend data with the provided goal
       trendData.push({
         name: `${monthName} ${year}`,
         profit: totalProfit,
-        goal: monthlyGoal, // Use the user's monthly goal
+        goal: goalValue, // Use the provided goal value
       });
     }
     
@@ -278,7 +282,8 @@ function Dashboard() {
       setError(null);
       
       // First fetch the monthly target to ensure we have the latest
-      await fetchUserMonthlyTarget();
+      const latestGoal = await fetchUserMonthlyTarget();
+      console.log("Latest monthly goal:", latestGoal);
       
       // Then proceed with the rest of your existing code
       
@@ -452,7 +457,7 @@ function Dashboard() {
       
       console.log(`Monthly deals for ${months[selectedMonth]} ${selectedYear}:`, monthlyDeals.length);
       
-      // Calculate stats based on monthly deals
+      // Calculate stats based on monthly deals with the latest goal
       const monthlyProfit = monthlyDeals.reduce((sum, deal) => sum + (Number(deal.profit) || 0), 0);
       const avgProfit = monthlyDeals.length > 0 ? monthlyProfit / monthlyDeals.length : 0;
       
@@ -466,7 +471,8 @@ function Dashboard() {
       });
       
       const avgProductsPerDeal = monthlyDeals.length > 0 ? monthlyProducts / monthlyDeals.length : 0;
-      const goalProgress = calculateGoalProgress(monthlyProfit);
+      const goalProgress = calculateGoalProgress(monthlyProfit, latestGoal);
+      console.log(`Monthly profit: ${monthlyProfit}, Goal: ${latestGoal}, Progress: ${goalProgress}%`);
       
       // Set statistics
       setStats({
@@ -476,8 +482,8 @@ function Dashboard() {
         goalProgress: goalProgress
       });
       
-      // Generate chart data
-      const trendData = generateProfitTrendData(userDeals);
+      // Generate chart data with the latest goal
+      const trendData = generateProfitTrendData(userDeals, latestGoal);
       const distributionData = generateProductDistribution(userDeals);
       
       console.log("Chart data generated:", { 
@@ -490,6 +496,11 @@ function Dashboard() {
       
       // Set recent deals
       setRecentDeals(userDeals.slice(0, 5));
+      
+      // Mark initial load as complete
+      if (!initialLoadComplete) {
+        setInitialLoadComplete(true);
+      }
       
     } catch (error) {
       console.error('Error in dashboard data fetching:', error);
@@ -512,35 +523,23 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !profileLoading) {
+      console.log("Initial data load with monthly goal:", userProfile.monthlyTarget);
       fetchDashboardData();
     }
-  }, [currentUser, selectedMonth, selectedYear]);
+  }, [currentUser, profileLoading]);
 
-  // Update your useEffect to respond to profile changes
+  // Update the profile change effect to force a refresh when the target changes
   useEffect(() => {
     // Update the monthly goal when the profile changes
-    if (userProfile && userProfile.monthlyTarget) {
+    if (userProfile && userProfile.monthlyTarget && initialLoadComplete) {
       console.log("Monthly target updated from profile:", userProfile.monthlyTarget);
       setMonthlyGoal(userProfile.monthlyTarget);
       
-      // Refresh dashboard data if we already have deals loaded
-      if (recentDeals.length > 0) {
-        console.log("Regenerating chart data with new monthly target");
-        const trendData = generateProfitTrendData(recentDeals);
-        setMonthlyProfitData(trendData);
-        
-        // Update goal progress
-        const monthlyDeals = recentDeals.filter(/* your filtering logic */);
-        const monthlyProfit = monthlyDeals.reduce((sum, deal) => sum + (Number(deal.profit) || 0), 0);
-        const goalProgress = calculateGoalProgress(monthlyProfit);
-        setStats(prev => ({
-          ...prev,
-          goalProgress: goalProgress
-        }));
-      }
+      // Trigger a full refresh to ensure all calculations use the new goal
+      fetchDashboardData();
     }
-  }, [userProfile.monthlyTarget]);
+  }, [userProfile.monthlyTarget, initialLoadComplete]);
 
   const formatProductsList = (products) => {
     if (!products) return 'None';
@@ -687,6 +686,9 @@ function Dashboard() {
           <span className="material-icons stat-icon">flag</span>
           <div className="stat-label">Goal Progress</div>
           <div className="stat-value">{stats.goalProgress}%</div>
+          <div className="stat-detail">
+            ${monthlyGoal.toLocaleString()} monthly target
+          </div>
           <div className="progress-bar">
             <div 
               className="progress-fill"
@@ -725,10 +727,17 @@ function Dashboard() {
                   <Line
                     type="monotone"
                     dataKey="goal"
-                    name="Goal"
+                    name="Monthly Target"
                     stroke="#aaaaaa"
                     strokeDasharray="5 5"
                     strokeWidth={2}
+                  />
+                  
+                  <ReferenceLine 
+                    y={monthlyGoal} 
+                    label="Monthly Target" 
+                    stroke="#aaaaaa" 
+                    strokeDasharray="3 3" 
                   />
                 </LineChart>
               </ResponsiveContainer>
