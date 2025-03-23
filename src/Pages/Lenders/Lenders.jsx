@@ -277,6 +277,37 @@ function Lenders() {
     setIsModalOpen(true);
   };
 
+  // Add a useEffect to manage focus when the modal opens
+  useEffect(() => {
+    // Find the first input element in the modal
+    if (isModalOpen) {
+      const firstInput = document.querySelector('.modal-body input');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }
+  }, [isModalOpen]);
+
+  // Handle ESC key to close the modal
+  const handleModalKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsModalOpen(false);
+    }
+  };
+
+  // Prevent scrolling of the main page when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isModalOpen]);
+
   return (
     <div className="lenders-container">
       <div className="lenders-header">
@@ -413,8 +444,13 @@ function Lenders() {
 
       {/* Add/Edit Lender Modal with Tabs */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal modal-large" onClick={e => e.stopPropagation()}>
+        <div 
+          className="modal-overlay" 
+          onClick={handleCloseModal}
+          onKeyDown={handleModalKeyDown}
+          tabIndex="-1"
+        >
+          <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{currentLender ? 'Edit Lender' : 'Add New Lender'}</h2>
               <button className="close-btn" onClick={handleCloseModal}>
