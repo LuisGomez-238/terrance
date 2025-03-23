@@ -119,6 +119,41 @@ function Deals() {
     return `${vehicle.year || ''} ${vehicle.model || ''}${vehicle.vin ? ` (VIN: ${vehicle.vin})` : ''}`.trim();
   };
 
+  const formatProducts = (products) => {
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return 'None';
+    }
+    
+    // For the table view, just show product names with commas
+    return products.map(product => {
+      if (typeof product === 'string') return product;
+      return product.name || 'Unknown Product';
+    }).join(', ');
+  };
+
+  const calculateTotalProfit = (deal) => {
+    // First check if we have a precalculated total
+    if (typeof deal.totalProfit === 'number') {
+      return deal.totalProfit;
+    }
+    
+    // Otherwise calculate from products and backEndProfit
+    let productsProfit = 0;
+    
+    if (Array.isArray(deal.products)) {
+      productsProfit = deal.products.reduce((sum, product) => {
+        if (typeof product === 'object' && product !== null) {
+          return sum + (parseFloat(product.profit) || 0);
+        }
+        return sum;
+      }, 0);
+    }
+    
+    const backEndProfit = parseFloat(deal.backEndProfit || deal.profit || 0);
+    
+    return productsProfit + backEndProfit;
+  };
+
   return (
     <div className="deals-container">
       <div className="deals-header">
@@ -172,12 +207,8 @@ function Deals() {
                   <td>{formatVehicle(deal.vehicle)}</td>
                   <td>{formatDate(deal.date)}</td>
                   <td>{deal.lenderId}</td>
-                  <td>
-                    {Array.isArray(deal.products) 
-                      ? deal.products.join(', ') 
-                      : (typeof deal.products === 'string' ? deal.products : '')}
-                  </td>
-                  <td className="profit">${deal.profit}</td>
+                  <td>{formatProducts(deal.products)}</td>
+                  <td className="profit">${calculateTotalProfit(deal).toFixed(2)}</td>
                   <td>
                     <Link to={`/deals/${deal.id}`} className="view-btn">
                       <span className="material-icons">visibility</span>

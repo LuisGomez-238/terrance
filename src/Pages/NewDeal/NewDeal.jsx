@@ -24,29 +24,30 @@ function NewDeal() {
   const [apr, setApr] = useState('');
   const [term, setTerm] = useState('');
   const [backEndProfit, setBackEndProfit] = useState('');
-  const [products, setProducts] = useState({
-    warranty: { selected: false, price: '' },
-    gap: { selected: false, price: '' },
-    paintProtection: { selected: false, price: '' },
-    tireWheel: { selected: false, price: '' },
-    keyReplacement: { selected: false, price: '' },
-    maintenance: { selected: false, price: '' }
-  });
   const [notes, setNotes] = useState('');
   
-  // Product selection state
+  // Updated product list with all specified products
   const availableProducts = [
-    { id: 'warranty', name: 'Extended Warranty', value: true },
+    { id: 'theftCode', name: 'Theft Code', value: false },
+    { id: 'vsc', name: 'VSC (Vehicle Service Contract)', value: false },
     { id: 'gap', name: 'GAP Insurance', value: false },
-    { id: 'protection', name: 'Paint Protection', value: false },
+    { id: 'finishingTouch', name: 'Finishing Touch', value: false },
     { id: 'maintenance', name: 'Maintenance Plan', value: false },
-    { id: 'roadside', name: 'Roadside Assistance', value: false }
+    { id: 'karrSecurity', name: 'KARR Security', value: false },
+    { id: 'karrGuard', name: 'KARR Guard', value: false },
+    { id: 'swat', name: 'S.W.A.T', value: false },
+    { id: 'lifetimeBattery', name: 'Lifetime Battery', value: false }
   ];
   
-  const [selectedProducts, setSelectedProducts] = useState(
+  // Updated product state to track both price and cost
+  const [productData, setProductData] = useState(
     availableProducts.reduce((acc, product) => ({
       ...acc,
-      [product.id]: product.value
+      [product.id]: {
+        selected: product.value,
+        price: '', // Sold for price
+        cost: ''   // Cost price
+      }
     }), {})
   );
   
@@ -64,16 +65,53 @@ function NewDeal() {
     fetchLenders();
   }, []);
   
-  const handleProductChange = (productId) => {
-    setSelectedProducts(prev => ({
+  // Function to handle product selection changes
+  const handleProductSelectionChange = (productId, selected) => {
+    setProductData(prev => ({
       ...prev,
-      [productId]: !prev[productId]
+      [productId]: {
+        ...prev[productId],
+        selected
+      }
     }));
   };
   
-  const calculateTotalProducts = () => {
-    return Object.values(products).reduce((total, product) => {
-      return total + (product.selected && product.price ? parseFloat(product.price) : 0);
+  // Function to handle product price/cost changes
+  const handleProductDataChange = (productId, field, value) => {
+    setProductData(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [field]: value
+      }
+    }));
+  };
+  
+  // Function to calculate gross profit for a specific product
+  const calculateProductProfit = (productId) => {
+    const product = productData[productId];
+    if (!product.selected) return 0;
+    
+    const price = parseFloat(product.price) || 0;
+    const cost = parseFloat(product.cost) || 0;
+    return price - cost;
+  };
+  
+  // Function to calculate total profit across all products
+  const calculateTotalProductsProfit = () => {
+    return Object.keys(productData).reduce((total, productId) => {
+      return total + calculateProductProfit(productId);
+    }, 0);
+  };
+  
+  // Function to calculate total revenue from products
+  const calculateTotalProductsRevenue = () => {
+    return Object.keys(productData).reduce((total, productId) => {
+      const product = productData[productId];
+      if (product.selected && product.price) {
+        return total + (parseFloat(product.price) || 0);
+      }
+      return total;
     }, 0);
   };
   
@@ -83,37 +121,63 @@ function NewDeal() {
     setError(null);
     
     try {
-      // Format date as Firestore timestamp if needed
-      const formattedDate = new Date();
-      
-      // Get selected products as array
-      const selectedProductsList = Object.entries(selectedProducts)
-        .filter(([_, selected]) => selected)
-        .map(([id, _]) => {
-          return availableProducts.find(p => p.id === id).name;
+      // Format the selected products with their price, cost, and profit information
+      const selectedProductsList = Object.entries(productData)
+        .filter(([_, data]) => data.selected)
+        .map(([id, data]) => {
+          const productInfo = availableProducts.find(p => p.id === id);
+          const soldPrice = parseFloat(data.price) || 0;
+          const cost = parseFloat(data.cost) || 0;
+          
+          return {
+            id: id,
+            name: productInfo.name,
+            soldPrice: soldPrice,
+            cost: cost,
+            profit: soldPrice - cost
+          };
         });
       
-      // Prepare deal data
+      // Calculate total profit from products
+      const productsProfit = calculateTotalProductsProfit();
+      
+      // Create a well-structured deal object
       const dealData = {
+        // Customer information
         customer: customerName,
+        customerPhone: customerPhone || null,
+        customerEmail: customerEmail || null,
+        
+        // Vehicle information
         vehicle: {
           year: vehicleYear,
           model: vehicleModel,
-          vin: vehicleVin
+          vin: vehicleVin || ''
         },
-        date: formattedDate,
+        
+        // Deal information
+        date: new Date(),
         lenderId: selectedLender,
+        lenderName: lenders.find(l => l.id === selectedLender)?.name || '',
+        apr: parseFloat(apr) || 0,
+        term: parseInt(term) || 0,
+        
+        // Products and profit
         products: selectedProductsList,
-        profit: Number(backEndProfit), // Convert to number
-        notes: notes,
+        productsProfit: productsProfit,
+        backEndProfit: parseFloat(backEndProfit) || 0,
+        totalProfit: productsProfit + (parseFloat(backEndProfit) || 0),
+        
+        // Additional information
+        notes: notes || '',
+        
+        // User identification
         userId: currentUser.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
       };
       
       console.log('Saving deal with data:', dealData);
       
-      // Save to Firestore
+      // Save to Firestore 
       const dealRef = await addDoc(collection(db, 'deals'), dealData);
       
       console.log('Deal saved successfully with ID:', dealRef.id);
@@ -266,22 +330,70 @@ function NewDeal() {
           
           <div className="form-section">
             <h2>Products Sold</h2>
-            <div className="products-grid">
-              {availableProducts.map(product => (
-                <div key={product.id} className="product-item">
-                  <input
-                    type="checkbox"
-                    id={product.id}
-                    checked={selectedProducts[product.id]}
-                    onChange={() => handleProductChange(product.id)}
-                  />
-                  <label htmlFor={product.id}>{product.name}</label>
-                </div>
-              ))}
-            </div>
-            
-            <div className="products-total">
-              Total Products: ${calculateTotalProducts().toFixed(2)}
+            <div className="product-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Select</th>
+                    <th>Product</th>
+                    <th>Sold Price ($)</th>
+                    <th>Cost ($)</th>
+                    <th>Profit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {availableProducts.map(product => (
+                    <tr key={product.id} className={productData[product.id].selected ? "selected-product" : ""}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          id={`select-${product.id}`}
+                          checked={productData[product.id].selected}
+                          onChange={(e) => handleProductSelectionChange(product.id, e.target.checked)}
+                        />
+                      </td>
+                      <td>
+                        <label htmlFor={`select-${product.id}`}>{product.name}</label>
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          id={`price-${product.id}`}
+                          value={productData[product.id].price}
+                          onChange={(e) => handleProductDataChange(product.id, 'price', e.target.value)}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          disabled={!productData[product.id].selected}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          id={`cost-${product.id}`}
+                          value={productData[product.id].cost}
+                          onChange={(e) => handleProductDataChange(product.id, 'cost', e.target.value)}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          disabled={!productData[product.id].selected}
+                        />
+                      </td>
+                      <td className="profit-column">
+                        ${productData[product.id].selected ? calculateProductProfit(product.id).toFixed(2) : '0.00'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan="2"><strong>Totals</strong></td>
+                    <td><strong>${calculateTotalProductsRevenue().toFixed(2)}</strong></td>
+                    <td></td>
+                    <td><strong>${calculateTotalProductsProfit().toFixed(2)}</strong></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         </div>

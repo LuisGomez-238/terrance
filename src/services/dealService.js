@@ -30,6 +30,48 @@ export async function createDeal(dealData) {
       return acc;
     }, {});
     
+    // Ensure numeric fields are stored as numbers
+    if (cleanData.profit) {
+      cleanData.profit = parseFloat(cleanData.profit) || 0;
+    }
+    
+    if (cleanData.apr) {
+      cleanData.apr = parseFloat(cleanData.apr) || 0;
+    }
+    
+    if (cleanData.term) {
+      cleanData.term = parseInt(cleanData.term) || 0;
+    }
+    
+    // Ensure products array has a consistent structure
+    if (cleanData.products) {
+      cleanData.products = Array.isArray(cleanData.products) 
+        ? cleanData.products.map(product => {
+            // If product is just a string, convert to object with basic structure
+            if (typeof product === 'string') {
+              return { 
+                name: product, 
+                soldPrice: 0, 
+                cost: 0, 
+                profit: 0 
+              };
+            }
+            
+            // If product is an object, ensure it has all fields with proper types
+            const soldPrice = parseFloat(product.soldPrice || product.price || 0);
+            const cost = parseFloat(product.cost || 0);
+            
+            return {
+              id: product.id || '',
+              name: product.name || 'Unknown Product',
+              soldPrice: soldPrice,
+              cost: cost,
+              profit: parseFloat(product.profit) || (soldPrice - cost)
+            };
+          })
+        : []; // Default to empty array if not valid
+    }
+    
     // Add timestamps and ensure we have a userId
     const dealWithTimestamp = {
       ...cleanData,
@@ -37,8 +79,7 @@ export async function createDeal(dealData) {
       updatedAt: serverTimestamp()
     };
     
-    // Convert JavaScript numbers to Firestore numbers
-    // Convert JavaScript dates to Firestore timestamps if needed
+    // Convert JavaScript dates to Firestore timestamps
     Object.keys(dealWithTimestamp).forEach(key => {
       if (dealWithTimestamp[key] instanceof Date) {
         dealWithTimestamp[key] = Timestamp.fromDate(dealWithTimestamp[key]);

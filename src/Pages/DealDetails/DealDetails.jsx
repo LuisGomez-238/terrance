@@ -568,27 +568,66 @@ function DealDetails() {
             <div className="details-section">
               <h2>Products Sold</h2>
               {deal.products && deal.products.length > 0 ? (
-                <div className="products-list">
-                  {deal.products.map((product, index) => (
-                    <div className="detail-item" key={index}>
-                      <span className="detail-label">
-                        {typeof product === 'string' 
-                          ? product 
-                          : (product.type || '').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                      </span>
-                      <span className="detail-value">
-                        {typeof product === 'string' 
-                          ? 'N/A' 
-                          : `$${product.price || 0}`}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="detail-item total-item">
-                    <span className="detail-label">Total Products:</span>
-                    <span className="detail-value">
-                      ${deal.products.reduce((sum, p) => sum + (typeof p === 'object' ? (p.price || 0) : 0), 0)}
-                    </span>
-                  </div>
+                <div className="products-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Sold Price</th>
+                        <th>Cost</th>
+                        <th>Profit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deal.products.map((product, index) => (
+                        <tr key={index}>
+                          <td>
+                            {typeof product === 'string' 
+                              ? product 
+                              : (product.name || 'Unknown Product')}
+                          </td>
+                          <td>
+                            ${typeof product === 'object' 
+                              ? (parseFloat(product.soldPrice || product.price || 0).toFixed(2))
+                              : '0.00'}
+                          </td>
+                          <td>
+                            ${typeof product === 'object' 
+                              ? (parseFloat(product.cost || 0).toFixed(2))
+                              : '0.00'}
+                          </td>
+                          <td className="profit-column">
+                            ${typeof product === 'object' 
+                              ? (parseFloat(product.profit || 0).toFixed(2))
+                              : '0.00'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td><strong>Total</strong></td>
+                        <td>
+                          <strong>
+                            ${deal.products.reduce((sum, p) => 
+                              sum + (typeof p === 'object' ? (parseFloat(p.soldPrice || p.price || 0)) : 0), 0).toFixed(2)}
+                          </strong>
+                        </td>
+                        <td>
+                          <strong>
+                            ${deal.products.reduce((sum, p) => 
+                              sum + (typeof p === 'object' ? (parseFloat(p.cost || 0)) : 0), 0).toFixed(2)}
+                          </strong>
+                        </td>
+                        <td className="profit-column">
+                          <strong>
+                            ${deal.products.reduce((sum, p) => 
+                              sum + (typeof p === 'object' ? (parseFloat(p.profit || 0)) : 0), 0).toFixed(2)}
+                          </strong>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               ) : (
                 <p className="no-products">No products sold</p>
