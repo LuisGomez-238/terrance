@@ -5,9 +5,24 @@ import { useAuth } from '../../AuthContext';
 import { format, subMonths, parseISO } from 'date-fns';
 import { getAIResponse } from '../../services/openaiService';
 import './AiAssistant.scss';
+import { useProfile } from '../../contexts/ProfileContext';
 
 function AiAssistant() {
   const { currentUser } = useAuth();
+  
+  const profileContext = useProfile();
+  const userProfile = profileContext?.userProfile || { 
+    monthlyTarget: 10000,
+    name: '',
+    notifications: {
+      newLenderPrograms: true,
+      dailySummary: true,
+      monthlyGoal: false,
+      aiSuggestions: true
+    }
+  };
+  const profileLoading = profileContext?.loading || false;
+  
   const [messages, setMessages] = useState([
     { id: 1, sender: 'ai', content: 'Terrance here. 20+ years in F&I. What do you need help with?' }
   ]);
@@ -194,15 +209,21 @@ function AiAssistant() {
     setLoading(true);
     
     try {
-      // Prepare the context for OpenAI
+      // Enhanced context with user profile information
       const context = {
         lenders,
         recentDeals: deals,
         userRole: 'Finance Manager',
-        dealershipName: 'Kia Dealership'
+        dealershipName: 'Kia Dealership',
+        // Add user profile data
+        userProfile: {
+          name: userProfile.name || 'Finance Manager',
+          monthlyTarget: userProfile.monthlyTarget || 10000,
+          preferences: userProfile.notifications || {}
+        }
       };
       
-      // Call the OpenAI service
+      // Call the OpenAI service with enhanced context
       const response = await getAIResponse(
         userMessage.content, 
         context, 
@@ -226,10 +247,21 @@ function AiAssistant() {
     }
   };
   
+  // Combine loading states
+  if (loading && profileLoading && messages.length <= 1) {
+    return <div className="ai-assistant-loading">Loading Terrance...</div>;
+  }
+  
   return (
     <div className="ai-assistant-container">
       <div className="ai-assistant-header">
         <h1>Terrance <span className="assistant-title">F&I Director</span></h1>
+        {userProfile.monthlyTarget && (
+          <div className="monthly-target-info">
+            <span className="material-icons">flag</span>
+            Monthly Target: ${userProfile.monthlyTarget.toLocaleString()}
+          </div>
+        )}
       </div>
       
       {error && <div className="error-message">{error}</div>}

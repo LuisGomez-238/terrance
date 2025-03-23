@@ -37,43 +37,56 @@ function Profile() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        // In a real app, fetch user data from Firestore
-        // For now, use mock data
+        setLoading(true);
+        setMessage({ text: '', type: '' });
         
-        const mockUserData = {
-          name: currentUser?.displayName || 'John Doe',
-          email: currentUser?.email || 'john.doe@example.com',
-          monthlyTarget: 50000,
-          notifications: {
-            newLenderPrograms: true,
-            dailySummary: true,
-            monthlyGoal: false,
-            aiSuggestions: true
-          }
-        };
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
         
-        const mockStats = {
-          ytdAvgProfit: 1185,
-          ytdProductsPerDeal: 2.1
-        };
-        
-        setFormData({
-          ...formData,
-          name: mockUserData.name,
-          email: mockUserData.email,
-          monthlyTarget: mockUserData.monthlyTarget.toString(),
-          notifications: mockUserData.notifications
-        });
-        
-        setStats(mockStats);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        setLoading(false);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log("Fetched user profile:", userData);
+          
+          // Initialize with defaults for any missing fields
+          setFormData({
+            name: userData.name || currentUser.displayName || '',
+            email: userData.email || currentUser.email || '',
+            monthlyTarget: userData.monthlyTarget ? userData.monthlyTarget.toString() : '',
+            notifications: userData.notifications ? userData.notifications : {
+              newLenderPrograms: true,
+              dailySummary: true,
+              monthlyGoal: false,
+              aiSuggestions: true
+            }
+          });
+          
+          setStats({
+            ytdAvgProfit: userData.ytdAvgProfit || 0,
+            ytdProductsPerDeal: userData.ytdProductsPerDeal || 0
+          });
+        } else {
+          // No profile exists yet, use defaults from auth
+          setFormData({
+            name: currentUser.displayName || '',
+            email: currentUser.email || '',
+            monthlyTarget: '',
+            notifications: {
+              newLenderPrograms: true,
+              dailySummary: true,
+              monthlyGoal: false,
+              aiSuggestions: true
+            }
+          });
+          console.log("No existing profile found, using defaults");
+        }
+      } catch (err) {
+        console.error("Error fetching user profile:", err);
         setMessage({
-          text: 'Error loading profile data. Please try again.',
+          text: 'Failed to load your profile. Please try again later.',
           type: 'error'
         });
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -135,44 +148,59 @@ function Profile() {
     setMessage({ text: '', type: '' });
     
     try {
-      // Update user profile data (would be implemented with actual Firebase)
+      // Convert monthlyTarget to a number and ensure it's valid
+      const monthlyTarget = parseInt(formData.monthlyTarget) || 0;
+      
+      // Create the profile data object
       const profileData = {
         name: formData.name,
-        monthlyTarget: parseInt(formData.monthlyTarget) || 0,
-        notifications: formData.notifications
+        monthlyTarget: monthlyTarget,
+        notifications: formData.notifications,
+        updatedAt: new Date()
       };
       
-      // In a real app, you'd update Firestore and auth profile
-      // await updateUserProfile(profileData);
-      console.log('Profile updated:', profileData);
+      console.log('Updating profile with data:', profileData);
+      
+      // Actually update Firestore document
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userDocRef, profileData);
       
       // Handle password change if requested
       if (showPasswordFields && formData.currentPassword && formData.newPassword) {
-        // In a real app, you'd use Firebase Auth to update password
-        /* 
-        const credential = EmailAuthProvider.credential(
-          currentUser.email,
-          formData.currentPassword
-        );
-        
-        // Reauthenticate user
-        await reauthenticateWithCredential(currentUser, credential);
-        
-        // Update password
-        await updatePassword(currentUser, formData.newPassword);
-        */
-        
-        console.log('Password updated successfully');
-        
-        // Clear password fields
-        setFormData(prev => ({
-          ...prev,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        }));
-        
-        setShowPasswordFields(false);
+        try {
+          const credential = EmailAuthProvider.credential(
+            currentUser.email,
+            formData.currentPassword
+          );
+          
+          // Reauthenticate user
+          await reauthenticateWithCredential(currentUser, credential);
+          
+          // Update password
+          await updatePassword(currentUser, formData.newPassword);
+          
+          console.log('Password updated successfully');
+          
+          // Clear password fields
+          setFormData(prev => ({
+            ...prev,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }));
+          
+          setShowPasswordFields(false);
+        } catch (passwordError) {
+          console.error('Error updating password:', passwordError);
+          throw new Error(passwordError.message || 'Failed to update password. Please check your current password.');
+        }
+      }
+      
+      // Update displayName in Firebase Auth if needed
+      if (currentUser.displayName !== formData.name) {
+        if (updateUserProfile) {
+          await updateUserProfile({ displayName: formData.name });
+        }
       }
       
       setMessage({

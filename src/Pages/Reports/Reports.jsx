@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import './Reports.scss';
+import { useProfile } from '../../contexts/ProfileContext';
 
 function Reports() {
   const { currentUser } = useAuth();
+  
+  // Get profile data and handle potential undefined values
+  const profileContext = useProfile();
+  const userProfile = profileContext?.userProfile || { monthlyTarget: 10000 };
+  const profileLoading = profileContext?.loading || false;
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [reportType, setReportType] = useState('monthly');
@@ -16,9 +23,44 @@ function Reports() {
   const [productData, setProductData] = useState([]);
   const [lenderData, setLenderData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [monthlyGoal, setMonthlyGoal] = useState(userProfile.monthlyTarget || 10000);
   
   // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A4DE6C', '#8884D8', '#FF6B6B'];
+  
+  // Function to fetch the user's monthly target
+  const fetchUserMonthlyTarget = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.monthlyTarget) {
+          console.log("Using user's monthly target:", userData.monthlyTarget);
+          const targetValue = Number(userData.monthlyTarget);
+          setMonthlyGoal(targetValue || 10000);
+          return targetValue;
+        }
+      } else {
+        console.log("No user document found, using default target");
+      }
+    } catch (error) {
+      console.error("Error fetching user's monthly target:", error);
+    }
+    
+    return monthlyGoal; // Return current value as fallback
+  };
+  
+  // Update useEffect to react to profile changes
+  useEffect(() => {
+    if (userProfile && userProfile.monthlyTarget) {
+      console.log("Monthly target updated from profile:", userProfile.monthlyTarget);
+      setMonthlyGoal(userProfile.monthlyTarget);
+    }
+  }, [userProfile.monthlyTarget]);
   
   useEffect(() => {
     const fetchReportData = async () => {
@@ -26,6 +68,9 @@ function Reports() {
       setError(null);
       
       try {
+        // First, ensure we have the latest monthly target
+        await fetchUserMonthlyTarget();
+        
         const months = parseInt(timeRange);
         const today = new Date();
         
@@ -36,7 +81,7 @@ function Reports() {
         let dealsQuery;
         
         try {
-          // We'll try to query with both where and orderBy (requires an index)
+          // Try to query with both where and orderBy (requires an index)
           dealsQuery = query(
             dealsRef,
             where('userId', '==', currentUser.uid),
@@ -48,6 +93,7 @@ function Reports() {
           console.log("Using fallback query without ordering due to:", e);
           dealsQuery = query(
             dealsRef,
+            where('userId', '==', currentUser.uid),
             where('createdAt', '>=', startDate)
           );
         }
@@ -124,7 +170,8 @@ function Reports() {
             deals: monthDeals.length,
             backEndProfit,
             avgProfit,
-            productsPerDeal
+            productsPerDeal,
+            goal: monthlyGoal
           });
           
           // Process product data
@@ -178,11 +225,11 @@ function Reports() {
     
     // Add headers row
     if (reportType === 'monthly') {
-      csvContent = "Month,Deals,Back-End Profit,Average Profit,Products Per Deal\n";
+      csvContent = "Month,Deals,Back-End Profit,Average Profit,Products Per Deal,Goal\n";
       
       // Add data rows
       monthlyData.forEach(month => {
-        csvContent += `${month.month},${month.deals},$${month.backEndProfit.toFixed(2)},$${month.avgProfit.toFixed(2)},${month.productsPerDeal.toFixed(2)}\n`;
+        csvContent += `${month.month},${month.deals},$${month.backEndProfit.toFixed(2)},$${month.avgProfit.toFixed(2)},${month.productsPerDeal.toFixed(2)},${month.goal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n`;
       });
     } else if (reportType === 'products') {
       csvContent = "Product,Count\n";
@@ -211,6 +258,10 @@ function Reports() {
     // Clean up
     document.body.removeChild(link);
   };
+  
+  if (loading || profileLoading) {
+    return <div className="loading">Loading report data...</div>;
+  }
   
   if (error) {
     return <div className="reports-error">{error}</div>;
@@ -303,6 +354,7 @@ function Reports() {
                           }} />
                           <Legend />
                           <Line yAxisId="left" type="monotone" dataKey="backEndProfit" name="Back-End Profit" stroke="#8884d8" activeDot={{ r: 8 }} />
+                          <Line yAxisId="left" type="monotone" dataKey="goal" name="Monthly Goal" stroke="#ff7300" strokeDasharray="5 5" />
                           <Line yAxisId="right" type="monotone" dataKey="deals" name="Number of Deals" stroke="#82ca9d" />
                         </LineChart>
                       </ResponsiveContainer>
@@ -341,6 +393,7 @@ function Reports() {
                         <th>Back-End Profit</th>
                         <th>Avg Profit</th>
                         <th>Products/Deal</th>
+                        <th>Goal</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -351,6 +404,7 @@ function Reports() {
                           <td>${month.backEndProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                           <td>${month.avgProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                           <td>{month.productsPerDeal.toFixed(1)}</td>
+                          <td>${month.goal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         </tr>
                       ))}
                     </tbody>

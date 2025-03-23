@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './Dashboard.scss';
+import { useProfile } from '../../contexts/ProfileContext';
 
 function Dashboard() {
   const { currentUser } = useAuth();
+  
+  // Get profile data and handle potential undefined values
+  const profileContext = useProfile();
+  const userProfile = profileContext?.userProfile || { monthlyTarget: 10000 };
+  const profileLoading = profileContext?.loading || false;
+  
   const [stats, setStats] = useState({
     totalDeals: 0,
     avgProfit: 0,
@@ -22,6 +29,8 @@ function Dashboard() {
   const [monthlyProfitData, setMonthlyProfitData] = useState([]);
   const [productDistribution, setProductDistribution] = useState([]);
   const [debugInfo, setDebugInfo] = useState(null);
+  const [monthlyGoal, setMonthlyGoal] = useState(userProfile.monthlyTarget || 10000);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
   
   // Colors for pie chart
   const COLORS = ['#e51b23', '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7', '#3b82f6', '#10b981', '#f97316'];
@@ -42,8 +51,8 @@ function Dashboard() {
   };
 
   // Function to calculate goal progress - adjust based on your business logic
-  const calculateGoalProgress = (totalProfit, monthlyGoal = 10000) => {
-    const progress = (totalProfit / monthlyGoal) * 100;
+  const calculateGoalProgress = (totalProfit, userGoal = monthlyGoal) => {
+    const progress = (totalProfit / userGoal) * 100;
     return Math.min(Math.round(progress), 100); // Cap at 100%
   };
 
@@ -164,7 +173,7 @@ function Dashboard() {
       trendData.push({
         name: `${monthName} ${year}`,
         profit: totalProfit,
-        goal: 10000, // Monthly goal - adjust as needed
+        goal: monthlyGoal, // Use the user's monthly goal
       });
     }
     
@@ -233,6 +242,32 @@ function Dashboard() {
       .slice(0, 8);
   };
 
+  // Add this function to fetch the user's monthly target
+  const fetchUserMonthlyTarget = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.monthlyTarget) {
+          console.log("Using user's monthly target:", userData.monthlyTarget);
+          const targetValue = Number(userData.monthlyTarget);
+          setMonthlyGoal(targetValue || 10000);
+          return targetValue;
+        }
+      } else {
+        console.log("No user document found, using default target");
+      }
+    } catch (error) {
+      console.error("Error fetching user's monthly target:", error);
+    }
+    
+    return monthlyGoal; // Return current value as fallback
+  };
+
   const fetchDashboardData = async () => {
     if (!currentUser) {
       setLoading(false);
@@ -241,6 +276,11 @@ function Dashboard() {
 
     try {
       setError(null);
+      
+      // First fetch the monthly target to ensure we have the latest
+      await fetchUserMonthlyTarget();
+      
+      // Then proceed with the rest of your existing code
       
       // Get user deals
       const dealsRef = collection(db, 'deals');
@@ -467,12 +507,40 @@ function Dashboard() {
       setProductDistribution([]);
     } finally {
       setLoading(false);
+      setLastRefresh(new Date());
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    if (currentUser) {
+      fetchDashboardData();
+    }
   }, [currentUser, selectedMonth, selectedYear]);
+
+  // Update your useEffect to respond to profile changes
+  useEffect(() => {
+    // Update the monthly goal when the profile changes
+    if (userProfile && userProfile.monthlyTarget) {
+      console.log("Monthly target updated from profile:", userProfile.monthlyTarget);
+      setMonthlyGoal(userProfile.monthlyTarget);
+      
+      // Refresh dashboard data if we already have deals loaded
+      if (recentDeals.length > 0) {
+        console.log("Regenerating chart data with new monthly target");
+        const trendData = generateProfitTrendData(recentDeals);
+        setMonthlyProfitData(trendData);
+        
+        // Update goal progress
+        const monthlyDeals = recentDeals.filter(/* your filtering logic */);
+        const monthlyProfit = monthlyDeals.reduce((sum, deal) => sum + (Number(deal.profit) || 0), 0);
+        const goalProgress = calculateGoalProgress(monthlyProfit);
+        setStats(prev => ({
+          ...prev,
+          goalProgress: goalProgress
+        }));
+      }
+    }
+  }, [userProfile.monthlyTarget]);
 
   const formatProductsList = (products) => {
     if (!products) return 'None';
@@ -521,7 +589,8 @@ function Dashboard() {
     return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,').replace(/\.00$/, '');
   };
 
-  if (loading) {
+  // Combine both loading states
+  if (loading || profileLoading) {
     return <div className="dashboard-loading">Loading dashboard data...</div>;
   }
 
@@ -553,9 +622,19 @@ function Dashboard() {
               ))}
             </select>
           </div>
-          <button className="refresh-btn" onClick={handleRefresh}>
-            <span className="material-icons">refresh</span>
-          </button>
+          <div className="refresh-container">
+            <button 
+              className="refresh-btn" 
+              onClick={handleRefresh}
+              title="Last refreshed: ${lastRefresh.toLocaleTimeString()}"
+            >
+              <span className="material-icons">refresh</span>
+              <span className="refresh-text">Refresh Data</span>
+            </button>
+            <div className="last-refresh">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+            </div>
+          </div>
         </div>
       </div>
       
