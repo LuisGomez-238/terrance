@@ -39,6 +39,7 @@ function Reports() {
           // We'll try to query with both where and orderBy (requires an index)
           dealsQuery = query(
             dealsRef,
+            where('userId', '==', currentUser.uid),
             where('createdAt', '>=', startDate),
             orderBy('createdAt', 'desc')
           );
@@ -54,7 +55,9 @@ function Reports() {
         const dealsSnapshot = await getDocs(dealsQuery);
         const deals = [];
         
+        console.log('Fetched deals:', dealsSnapshot.size);
         dealsSnapshot.forEach(doc => {
+          console.log('Deal data:', doc.id, doc.data());
           const dealData = doc.data();
           
           // Skip deals without required data
