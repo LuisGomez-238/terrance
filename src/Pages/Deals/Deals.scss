@@ -1,5 +1,27 @@
+// Kia color palette
+$primary-color: #BB162B; // Kia Red
+$primary-dark: #8E0F21; // Darker red for hover states
+$secondary-color: #000000; // Kia Black
+$dark-text: #333333; // Dark gray for text
+$light-text: #666666; // Light gray for secondary text
+$table-hover: #f8f8f8; // Light gray for table row hover
+$table-header: #f1f1f1; // Slightly darker gray for table headers
+$border-color: #e0e0e0; // Light gray for borders
+$error-color: #ef476f; // Error color
+$success-color: #06d6a0; // Success color
+$profit-positive: #05A857; // Profit green color
+$profit-negative: #BB162B; // Loss red color (matches Kia red)
+$background-color: #f8f9fa; // Light background
+$card-bg: #ffffff; // White card
+$input-bg: #f5f5f5; // Light gray input background
+$shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
+
 .deals-container {
   padding: 1.5rem;
+  background-color: $background-color;
+  min-height: calc(100vh - 60px); // Account for navbar height
+  width: 100%;
+  box-sizing: border-box;
   
   .deals-header {
     display: flex;

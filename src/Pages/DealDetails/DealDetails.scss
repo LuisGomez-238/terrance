@@ -1,7 +1,27 @@
+// Kia color palette
+$primary-color: #BB162B; // Kia Red
+$primary-dark: #8E0F21; // Darker red for hover states
+$secondary-color: #000000; // Kia Black
+$dark-text: #333333; // Dark gray for text
+$light-text: #666666; // Light gray for secondary text
+$table-header: #f1f1f1; // Light gray for table headers
+$border-color: #e0e0e0; // Light gray for borders
+$input-bg: #f5f5f5; // Light gray input background
+$hover-bg: #f8f8f8; // Light gray for hover states
+$card-bg: #ffffff; // White card background
+$error-color: #ef476f; // Error color
+$success-color: #06d6a0; // Success color
+$profit-positive: #05A857; // Profit green color
+$profit-negative: #BB162B; // Loss red color (matches Kia red)
+$shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
+
 .deal-details-container {
     padding: 1.5rem;
     max-width: 1200px;
     margin: 0 auto;
+    background-color: #f8f9fa;
+    min-height: calc(100vh - 60px); // Account for navbar height
+    box-sizing: border-box;
     
     .deal-details-header {
       display: flex;
@@ -9,7 +29,7 @@
       align-items: center;
       margin-bottom: 2rem;
       padding-bottom: 1rem;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid $border-color;
       
       .header-left {
         display: flex;
@@ -17,36 +37,38 @@
         gap: 0.5rem;
         
         .back-link {
-          color: #4f46e5;
+          color: $primary-color;
           text-decoration: none;
           font-size: 0.9rem;
           display: inline-flex;
           align-items: center;
+          transition: color 0.2s ease;
           
           &:hover {
-            text-decoration: underline;
+            color: $primary-dark;
           }
         }
         
         h1 {
-          font-size: 1.8rem;
-          font-weight: 600;
+          font-size: 1.75rem;
+          font-weight: 700;
           margin: 0;
-          color: #1f2937;
+          color: $dark-text;
         }
       }
       
       .header-actions {
         display: flex;
-        gap: 1rem;
+        gap: 0.75rem;
         
         button {
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
+          padding: 0.65rem 1rem;
+          border-radius: 8px;
           font-size: 0.9rem;
-          font-weight: 500;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
+          border: none;
           
           &:disabled {
             opacity: 0.6;
@@ -55,42 +77,59 @@
         }
         
         .edit-btn {
-          background-color: #4f46e5;
+          background-color: $primary-color;
           color: white;
-          border: none;
           
           &:hover:not(:disabled) {
-            background-color: #4338ca;
+            background-color: $primary-dark;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+          }
+          
+          &:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba($primary-color, 0.3);
           }
         }
         
         .delete-btn {
           background-color: white;
-          color: #ef4444;
-          border: 1px solid #ef4444;
+          color: $primary-color;
+          border: 1px solid $primary-color;
           
           &:hover:not(:disabled) {
-            background-color: #fef2f2;
+            background-color: rgba($primary-color, 0.05);
+            transform: translateY(-1px);
+          }
+          
+          &:active:not(:disabled) {
+            transform: translateY(0);
           }
         }
         
         .save-btn {
-          background-color: #10b981;
+          background-color: $profit-positive;
           color: white;
-          border: none;
           
           &:hover:not(:disabled) {
-            background-color: #059669;
+            background-color: darken($profit-positive, 5%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba($profit-positive, 0.3);
+          }
+          
+          &:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba($profit-positive, 0.3);
           }
         }
         
         .cancel-btn {
           background-color: white;
-          color: #6b7280;
-          border: 1px solid #d1d5db;
+          color: $light-text;
+          border: 1px solid $border-color;
           
           &:hover:not(:disabled) {
-            background-color: #f9fafb;
+            background-color: $hover-bg;
           }
         }
       }
@@ -100,8 +139,8 @@
     .deal-form {
       .form-row {
         display: flex;
-        gap: 2rem;
-        margin-bottom: 2rem;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
         
         @media (max-width: 768px) {
           flex-direction: column;
@@ -111,18 +150,18 @@
       
       .form-section {
         flex: 1;
-        background-color: white;
+        background-color: $card-bg;
         padding: 1.5rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 2px 10px $shadow-color;
         
         h2 {
           font-size: 1.25rem;
           font-weight: 600;
           margin: 0 0 1.25rem 0;
-          color: #1f2937;
+          color: $dark-text;
           padding-bottom: 0.75rem;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid $border-color;
         }
         
         .form-group {
@@ -132,7 +171,7 @@
             display: block;
             font-size: 0.9rem;
             font-weight: 500;
-            color: #4b5563;
+            color: $light-text;
             margin-bottom: 0.35rem;
           }
           
@@ -140,16 +179,24 @@
           select,
           textarea {
             width: 100%;
-            padding: 0.6rem 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid $border-color;
+            border-radius: 8px;
             font-size: 0.95rem;
-            transition: border-color 0.2s;
+            box-sizing: border-box;
+            background-color: $input-bg;
+            color: $dark-text;
+            transition: all 0.2s ease;
             
             &:focus {
               outline: none;
-              border-color: #4f46e5;
-              box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+              border-color: $primary-color;
+              box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+              background-color: lighten($input-bg, 2%);
+            }
+            
+            &::placeholder {
+              color: $light-text;
             }
           }
           
@@ -164,6 +211,18 @@
             appearance: none;
           }
         }
+        
+        // Style for calculated profit
+        .calculated-profit {
+          .profit-display {
+            font-weight: 600;
+            padding: 0.65rem 0.75rem;
+            background-color: lighten($profit-positive, 55%);
+            border: 1px solid lighten($profit-positive, 30%);
+            color: $profit-positive;
+            border-radius: 8px;
+          }
+        }
       }
       
       .products-list {
@@ -174,21 +233,50 @@
         .product-item {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.75rem;
+          padding: 0.5rem;
+          border-radius: 8px;
+          transition: background-color 0.2s ease;
+          
+          &:hover {
+            background-color: $hover-bg;
+          }
           
           label {
             flex: 1;
             font-weight: normal;
             cursor: pointer;
-          }
-          
-          .product-price {
-            width: 5rem;
+            margin: 0;
+            font-size: 0.95rem;
+            color: $dark-text;
           }
           
           input[type="checkbox"] {
             width: auto;
             cursor: pointer;
+            margin: 0;
+          }
+          
+          // New product price group
+          .product-price-group {
+            display: flex;
+            gap: 8px;
+            
+            input {
+              width: 100px;
+              padding: 0.5rem;
+              font-size: 0.85rem;
+            }
+            
+            .product-cost {
+              background-color: rgba(0, 0, 0, 0.02);
+            }
+          }
+          
+          .product-price {
+            width: 5rem;
+            padding: 0.5rem;
+            font-size: 0.85rem;
           }
         }
       }
@@ -197,7 +285,8 @@
         margin-top: 1.25rem;
         text-align: right;
         font-weight: 600;
-        color: #1f2937;
+        color: $profit-positive;
+        font-size: 1.05rem;
       }
       
       .notes-section {
@@ -206,6 +295,7 @@
         textarea {
           width: 100%;
           resize: vertical;
+          min-height: 100px;
         }
       }
     }
@@ -214,8 +304,8 @@
     .deal-details-content {
       .details-row {
         display: flex;
-        gap: 2rem;
-        margin-bottom: 2rem;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
         
         @media (max-width: 768px) {
           flex-direction: column;
@@ -225,46 +315,49 @@
       
       .details-section {
         flex: 1;
-        background-color: white;
+        background-color: $card-bg;
         padding: 1.5rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 2px 10px $shadow-color;
         
         h2 {
           font-size: 1.25rem;
           font-weight: 600;
           margin: 0 0 1.25rem 0;
-          color: #1f2937;
+          color: $dark-text;
           padding-bottom: 0.75rem;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom: 1px solid $border-color;
         }
         
         .detail-item {
           display: flex;
           margin-bottom: 0.75rem;
+          padding: 0.3rem 0;
           
           &.total-item {
             margin-top: 1rem;
             padding-top: 0.75rem;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid $border-color;
             font-weight: 600;
           }
           
           .detail-label {
             width: 40%;
             font-weight: 500;
-            color: #4b5563;
+            color: $light-text;
           }
           
           .detail-value {
             flex: 1;
-            color: #1f2937;
+            color: $dark-text;
+            font-weight: 500;
           }
         }
         
         .no-products {
-          color: #6b7280;
+          color: $light-text;
           font-style: italic;
+          padding: 1rem 0;
         }
       }
       
@@ -274,7 +367,136 @@
         .notes-content {
           white-space: pre-line;
           line-height: 1.5;
-          color: #1f2937;
+          color: $dark-text;
+          padding: 0.5rem 0;
+          min-height: 2rem;
+        }
+      }
+      
+      // Products table styling
+      .products-table {
+        width: 100%;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.9rem;
+          
+          th, td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid $border-color;
+          }
+          
+          th {
+            background-color: $table-header;
+            font-weight: 600;
+            color: $dark-text;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            
+            &:first-child {
+              border-top-left-radius: 8px;
+            }
+            
+            &:last-child {
+              border-top-right-radius: 8px;
+            }
+          }
+          
+          tbody tr {
+            transition: background-color 0.2s ease;
+            
+            &:hover {
+              background-color: $hover-bg;
+            }
+            
+            &:last-child td {
+              border-bottom: none;
+            }
+          }
+          
+          tfoot tr {
+            font-weight: 600;
+            background-color: $hover-bg;
+            
+            td {
+              border-top: 2px solid $border-color;
+            }
+            
+            &:last-child td {
+              &:first-child {
+                border-bottom-left-radius: 8px;
+              }
+              
+              &:last-child {
+                border-bottom-right-radius: 8px;
+              }
+            }
+          }
+          
+          .profit-column {
+            color: $profit-positive;
+          }
+        }
+      }
+      
+      // Profit breakdown section
+      .profit-breakdown {
+        background-color: $card-bg;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px $shadow-color;
+        margin-top: 1.5rem;
+        
+        h3 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0 0 1.25rem 0;
+          color: $dark-text;
+          padding-bottom: 0.75rem;
+          border-bottom: 1px solid $border-color;
+        }
+        
+        .breakdown-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.65rem 0;
+          border-bottom: 1px solid $border-color;
+          
+          &:last-child {
+            border-bottom: none;
+          }
+          
+          .label {
+            color: $light-text;
+            font-weight: 500;
+          }
+          
+          .value {
+            font-weight: 600;
+            color: $dark-text;
+          }
+          
+          &.total {
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            border-top: 2px solid $border-color;
+            
+            .label {
+              color: $dark-text;
+              font-weight: 600;
+              font-size: 1.1rem;
+            }
+            
+            .value {
+              color: $profit-positive;
+              font-size: 1.1rem;
+            }
+          }
         }
       }
     }
@@ -288,23 +510,74 @@
       font-size: 1.1rem;
     }
     
+    .deal-error, 
     .deal-not-found {
       text-align: center;
-      padding: 3rem 1rem;
+      background-color: $card-bg;
+      padding: 3rem 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px $shadow-color;
+      margin: 2rem auto;
+      max-width: 600px;
       
       h2 {
         font-size: 1.5rem;
-        color: #1f2937;
+        color: $dark-text;
         margin-bottom: 1rem;
       }
       
+      p {
+        color: $light-text;
+        margin-bottom: 1.5rem;
+      }
+      
       .back-link {
-        color: #4f46e5;
+        display: inline-block;
+        color: white;
+        background-color: $primary-color;
         text-decoration: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s ease;
         
         &:hover {
-          text-decoration: underline;
+          background-color: $primary-dark;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+        }
+        
+        &:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 6px rgba($primary-color, 0.3);
         }
       }
     }
+}
+
+// Responsive adjustments
+@media (max-width: 480px) {
+  .deal-details-container {
+    padding: 1rem;
+    
+    .deal-details-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+    
+    .deal-form,
+    .deal-details-content {
+      .form-section,
+      .details-section {
+        padding: 1.25rem;
+      }
+    }
   }
+}

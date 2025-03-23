@@ -35,6 +35,9 @@ function DealDetails() {
     vehicleModel: '',
     vehicleVin: '',
     lenderId: '',
+    loanAmount: '',
+    buyRate: '',
+    sellRate: '',
     apr: '',
     term: '',
     productData: {},
@@ -132,6 +135,9 @@ function DealDetails() {
           vehicleModel: formattedDeal.vehicle.model || '',
           vehicleVin: formattedDeal.vehicle.vin || '',
           lenderId: formattedDeal.deal.lenderId,
+          loanAmount: formattedDeal.deal.loanAmount?.toString() || '',
+          buyRate: formattedDeal.deal.buyRate?.toString() || '',
+          sellRate: formattedDeal.deal.sellRate?.toString() || '',
           apr: formattedDeal.deal.apr.toString(),
           term: formattedDeal.deal.term.toString(),
           productData: productsObj,
@@ -271,6 +277,9 @@ function DealDetails() {
           vin: formData.vehicleVin
         },
         lenderId: formData.lenderId,
+        loanAmount: parseFloat(formData.loanAmount) || 0,
+        buyRate: parseFloat(formData.buyRate) || 0,
+        sellRate: parseFloat(formData.sellRate) || 0,
         apr: parseFloat(formData.apr) || 0,
         term: parseInt(formData.term) || 0,
         profit: totalProfit,
@@ -296,8 +305,10 @@ function DealDetails() {
         },
         deal: {
           lenderId: formData.lenderId,
-          apr: parseFloat(formData.apr) || 0,
-          term: parseInt(formData.term) || 0,
+          buyRate: formData.buyRate,
+          sellRate: formData.sellRate,
+          apr: formData.apr,
+          term: formData.term,
           backEndProfit: totalProfit
         },
         products: selectedProducts,
@@ -493,6 +504,45 @@ function DealDetails() {
                 </select>
               </div>
               <div className="form-group">
+                <label htmlFor="loanAmount">Loan Amount ($)</label>
+                <input
+                  id="loanAmount"
+                  name="loanAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.loanAmount}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="buyRate">Buy Rate (%)</label>
+                <input
+                  id="buyRate"
+                  name="buyRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.buyRate}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="sellRate">Sell Rate (%)</label>
+                <input
+                  id="sellRate"
+                  name="sellRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.sellRate}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
                 <label htmlFor="apr">APR (%)</label>
                 <input
                   id="apr"
@@ -537,14 +587,24 @@ function DealDetails() {
                     <label htmlFor={key}>
                       {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                     </label>
-                    <input
-                      type="number"
-                      placeholder="$"
-                      value={product.price}
-                      onChange={(e) => handleProductDataChange(key, 'price', e.target.value)}
-                      disabled={!product.selected}
-                      className="product-price"
-                    />
+                    <div className="product-price-group">
+                      <input
+                        type="number"
+                        placeholder="Price $"
+                        value={product.price}
+                        onChange={(e) => handleProductDataChange(key, 'price', e.target.value)}
+                        disabled={!product.selected}
+                        className="product-price"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Cost $"
+                        value={product.cost}
+                        onChange={(e) => handleProductDataChange(key, 'cost', e.target.value)}
+                        disabled={!product.selected}
+                        className="product-cost"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
