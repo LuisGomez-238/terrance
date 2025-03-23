@@ -27,8 +27,7 @@ function DealDetails() {
     lenderId: '',
     apr: '',
     term: '',
-    backEndProfit: '',
-    products: {},
+    productData: {},
     notes: ''
   });
   
@@ -126,8 +125,7 @@ function DealDetails() {
           lenderId: formattedDeal.deal.lenderId,
           apr: formattedDeal.deal.apr.toString(),
           term: formattedDeal.deal.term.toString(),
-          backEndProfit: formattedDeal.deal.backEndProfit.toString(),
-          products: productsObj,
+          productData: productsObj,
           notes: formattedDeal.notes
         });
         
@@ -152,23 +150,32 @@ function DealDetails() {
     }));
   };
   
-  const handleProductChange = (product, isChecked, price = '') => {
+  const handleProductDataChange = (productId, field, value) => {
     setFormData(prev => ({
       ...prev,
-      products: {
-        ...prev.products,
-        [product]: {
-          selected: isChecked,
-          price: isChecked ? (price || prev.products[product].price) : ''
+      productData: {
+        ...prev.productData,
+        [productId]: {
+          ...prev.productData[productId],
+          [field]: value
         }
       }
     }));
   };
   
-  const calculateTotalProducts = () => {
-    return Object.values(formData.products).reduce((total, product) => {
-      return total + (product.selected && product.price ? parseFloat(product.price) : 0);
-    }, 0);
+  const calculateTotalProductsProfit = () => {
+    let totalProfit = 0;
+    
+    Object.keys(formData.productData).forEach(productId => {
+      const product = formData.productData[productId];
+      if (product.selected) {
+        const soldPrice = parseFloat(product.price) || 0;
+        const cost = parseFloat(product.cost) || 0;
+        totalProfit += (soldPrice - cost);
+      }
+    });
+    
+    return totalProfit;
   };
   
   const handleUpdate = async (e) => {
@@ -176,13 +183,24 @@ function DealDetails() {
     setLoading(true);
     
     try {
-      // Construct the updated deal object
-      const selectedProducts = Object.entries(formData.products)
+      // Construct the updated deal object with calculated profit
+      const selectedProducts = Object.entries(formData.productData)
         .filter(([_, product]) => product.selected)
-        .map(([key, product]) => ({
-          type: key,
-          price: parseFloat(product.price) || 0
-        }));
+        .map(([key, product]) => {
+          const soldPrice = parseFloat(product.price) || 0;
+          const cost = parseFloat(product.cost) || 0;
+          
+          return {
+            id: key,
+            name: availableProducts.find(p => p.id === key)?.name || key,
+            soldPrice: soldPrice,
+            cost: cost,
+            profit: soldPrice - cost
+          };
+        });
+      
+      // Calculate total profit
+      const totalProfit = calculateTotalProductsProfit();
       
       // Create update object for Firestore
       const updateData = {
@@ -197,7 +215,7 @@ function DealDetails() {
         lenderId: formData.lenderId,
         apr: parseFloat(formData.apr) || 0,
         term: parseInt(formData.term) || 0,
-        profit: parseFloat(formData.backEndProfit) || 0,
+        profit: totalProfit, // Automatically calculated profit
         products: selectedProducts,
         notes: formData.notes,
         updatedAt: serverTimestamp()
@@ -224,7 +242,7 @@ function DealDetails() {
           lenderId: formData.lenderId,
           apr: parseFloat(formData.apr) || 0,
           term: parseInt(formData.term) || 0,
-          backEndProfit: parseFloat(formData.backEndProfit) || 0
+          backEndProfit: totalProfit
         },
         products: selectedProducts,
         notes: formData.notes,
@@ -448,31 +466,22 @@ function DealDetails() {
                   required
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="backEndProfit">Back-end Profit ($)</label>
-                <input
-                  id="backEndProfit"
-                  name="backEndProfit"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.backEndProfit}
-                  onChange={handleInputChange}
-                  required
-                />
+              <div className="form-group calculated-profit">
+                <label>Backend Profit (calculated)</label>
+                <div className="profit-display">${calculateTotalProductsProfit().toFixed(2)}</div>
               </div>
             </div>
             
             <div className="form-section">
               <h2>Products Sold</h2>
               <div className="products-list">
-                {Object.entries(formData.products).map(([key, product]) => (
+                {Object.entries(formData.productData).map(([key, product]) => (
                   <div className="product-item" key={key}>
                     <input
                       type="checkbox"
                       id={key}
                       checked={product.selected}
-                      onChange={(e) => handleProductChange(key, e.target.checked)}
+                      onChange={(e) => handleProductDataChange(key, 'selected', e.target.checked)}
                     />
                     <label htmlFor={key}>
                       {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
@@ -481,7 +490,7 @@ function DealDetails() {
                       type="number"
                       placeholder="$"
                       value={product.price}
-                      onChange={(e) => handleProductChange(key, true, e.target.value)}
+                      onChange={(e) => handleProductDataChange(key, 'price', e.target.value)}
                       disabled={!product.selected}
                       className="product-price"
                     />
@@ -490,7 +499,7 @@ function DealDetails() {
               </div>
               
               <div className="products-total">
-                Total Products: ${calculateTotalProducts().toFixed(2)}
+                Total Products: ${calculateTotalProductsProfit().toFixed(2)}
               </div>
             </div>
           </div>

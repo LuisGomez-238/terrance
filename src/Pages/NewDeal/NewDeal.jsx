@@ -23,7 +23,6 @@ function NewDeal() {
   const [selectedLender, setSelectedLender] = useState('');
   const [apr, setApr] = useState('');
   const [term, setTerm] = useState('');
-  const [backEndProfit, setBackEndProfit] = useState('');
   const [notes, setNotes] = useState('');
   
   // Updated product list with all specified products
@@ -97,11 +96,20 @@ function NewDeal() {
     return price - cost;
   };
   
-  // Function to calculate total profit across all products
+  // Function to calculate total profit from all products
   const calculateTotalProductsProfit = () => {
-    return Object.keys(productData).reduce((total, productId) => {
-      return total + calculateProductProfit(productId);
-    }, 0);
+    let totalProfit = 0;
+    
+    Object.keys(productData).forEach(productId => {
+      const product = productData[productId];
+      if (product.selected) {
+        const soldPrice = parseFloat(product.price) || 0;
+        const cost = parseFloat(product.cost) || 0;
+        totalProfit += (soldPrice - cost);
+      }
+    });
+    
+    return totalProfit;
   };
   
   // Function to calculate total revenue from products
@@ -139,7 +147,7 @@ function NewDeal() {
         });
       
       // Calculate total profit from products
-      const productsProfit = calculateTotalProductsProfit();
+      const totalProfit = calculateTotalProductsProfit();
       
       // Create a well-structured deal object
       const dealData = {
@@ -164,9 +172,7 @@ function NewDeal() {
         
         // Products and profit
         products: selectedProductsList,
-        productsProfit: productsProfit,
-        backEndProfit: parseFloat(backEndProfit) || 0,
-        totalProfit: productsProfit + (parseFloat(backEndProfit) || 0),
+        profit: totalProfit, // Automatically calculated profit
         
         // Additional information
         notes: notes || '',
@@ -314,17 +320,9 @@ function NewDeal() {
                 required
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="backEndProfit">Back-end Profit ($)</label>
-              <input
-                id="backEndProfit"
-                type="number"
-                step="0.01"
-                min="0"
-                value={backEndProfit}
-                onChange={(e) => setBackEndProfit(e.target.value)}
-                required
-              />
+            <div className="form-group calculated-profit">
+              <label>Backend Profit (calculated)</label>
+              <div className="profit-display">${calculateTotalProductsProfit().toFixed(2)}</div>
             </div>
           </div>
           
