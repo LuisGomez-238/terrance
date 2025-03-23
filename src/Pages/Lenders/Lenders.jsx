@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getLenders, createLender, updateLender, deleteLender } from '../../services/lenderService';
 import './Lenders.scss';
+import { useLoading } from '../../contexts/LoadingContext';
 
 function Lenders() {
   const [lenders, setLenders] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState(window.innerWidth <= 768 ? 'card' : 'table');
   const [activeTab, setActiveTab] = useState('basic');
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Form state for adding/editing lenders
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,6 +89,8 @@ function Lenders() {
     }
   });
   
+  const { showLoading, hideLoading } = useLoading();
+
   useEffect(() => {
     loadLenders();
     
@@ -102,17 +105,18 @@ function Lenders() {
 
   const loadLenders = async () => {
     try {
-      setLoading(true);
+      showLoading("Loading lenders...");
       setError(null);
       
       const data = await getLenders();
       setLenders(data);
+      setDataLoaded(true);
       
     } catch (err) {
       console.error('Error loading lenders:', err);
       setError('Failed to load lenders. Please try again.');
     } finally {
-      setLoading(false);
+      hideLoading();
     }
   };
 
@@ -308,11 +312,11 @@ function Lenders() {
     e.preventDefault();
     
     try {
-      setLoading(true);
+      showLoading("Saving lender...");
       
       // Clean up the credit tiers before saving
       const formattedCreditTiers = formData.creditTiers.map(tier => {
-        // Ensure rates exist
+        // Ensure rates object exists
         const rates = tier.rates || {};
         
         // Return a cleaned tier object
@@ -321,13 +325,13 @@ function Lenders() {
           minScore: tier.minScore,
           maxLTV: tier.maxLTV,
           rates: {
-            '60': rates['60'] === '' ? 'N/A' : 
+            '60': rates['60'] === '' ? undefined : 
                   rates['60'] === 'N/A' ? 'N/A' : 
                   parseFloat(rates['60']),
-            '72': rates['72'] === '' ? 'N/A' : 
+            '72': rates['72'] === '' ? undefined : 
                   rates['72'] === 'N/A' ? 'N/A' : 
                   parseFloat(rates['72']),
-            '84': rates['84'] === '' ? 'N/A' : 
+            '84': rates['84'] === '' ? undefined : 
                   rates['84'] === 'N/A' ? 'N/A' : 
                   parseFloat(rates['84'])
           }
@@ -355,21 +359,21 @@ function Lenders() {
       console.error('Error saving lender:', err);
       setError('Failed to save lender. Please try again.');
     } finally {
-      setLoading(false);
+      hideLoading();
     }
   };
 
   const handleDeleteLender = async (id) => {
     if (window.confirm('Are you sure you want to delete this lender?')) {
       try {
-        setLoading(true);
+        showLoading("Deleting lender...");
         await deleteLender(id);
         await loadLenders();
       } catch (err) {
         console.error('Error deleting lender:', err);
         setError('Failed to delete lender. Please try again.');
       } finally {
-        setLoading(false);
+        hideLoading();
       }
     }
   };
@@ -427,6 +431,10 @@ function Lenders() {
     };
   }, [isModalOpen]);
 
+  if (!dataLoaded && !error) {
+    return null;
+  }
+
   return (
     <div className="lenders-container">
       <div className="lenders-header">
@@ -459,9 +467,7 @@ function Lenders() {
 
       {error && <div className="error-message">{error}</div>}
 
-      {loading && lenders.length === 0 ? (
-        <div className="loading">Loading lenders...</div>
-      ) : filteredLenders.length === 0 ? (
+      {dataLoaded && filteredLenders.length === 0 ? (
         <div className="empty-state">
           <span className="material-icons">account_balance</span>
           <h3>No lenders found</h3>
@@ -969,9 +975,8 @@ function Lenders() {
                     <button 
                       type="submit" 
                       className="btn-primary"
-                      disabled={loading}
                     >
-                      {loading ? 'Saving...' : currentLender ? 'Update Lender' : 'Add Lender'}
+                      {currentLender ? 'Update Lender' : 'Add Lender'}
                     </button>
                   )}
                 </div>

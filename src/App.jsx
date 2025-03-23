@@ -22,6 +22,7 @@ import Profile from './Pages/Profile/Profile';
 // Context
 import { AuthProvider } from './AuthContext';
 import { ProfileProvider } from './contexts/ProfileContext';
+import { LoadingProvider } from './contexts/LoadingContext';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -42,25 +43,27 @@ function App() {
 
   return (
     <AuthProvider>
+    <LoadingProvider>
       <ProfileProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-            
-            <Route path="/" element={user ? <AppLayout /> : <Navigate to="/login" />}>
-              <Route index element={<Dashboard />} />
-              <Route path="deals" element={<Deals />} />
-              <Route path="deals/new" element={<NewDeal />} />
-              <Route path="deals/:dealId" element={<DealDetails />} />
-              <Route path="lenders" element={<Lenders />} />
-              <Route path="lenders/:lenderId" element={<LenderDetails />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="ai-assistant" element={<AiAssistant />} />
-              <Route path="profile" element={<Profile />} />
-            </Route>
-          </Routes>
-        </Router>
+          <Router>
+            <Routes>
+              <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+              
+              <Route path="/" element={user ? <AppLayout /> : <Navigate to="/login" />}>
+                <Route index element={<Dashboard />} />
+                <Route path="deals" element={<Deals />} />
+                <Route path="deals/new" element={<NewDeal />} />
+                <Route path="deals/:dealId" element={<DealDetails />} />
+                <Route path="lenders" element={<Lenders />} />
+                <Route path="lenders/:lenderId" element={<LenderDetails />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="ai-assistant" element={<AiAssistant />} />
+                <Route path="profile" element={<Profile />} />
+              </Route>
+            </Routes>
+          </Router>
       </ProfileProvider>
+    </LoadingProvider>
     </AuthProvider>
   );
 }

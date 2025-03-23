@@ -1,71 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import './Deals.scss';
+import { useLoading } from '../../contexts/LoadingContext';
 
 function Deals() {
   const { currentUser } = useAuth();
   const [deals, setDeals] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showLoading, hideLoading } = useLoading();
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  useEffect(() => {
-    const fetchDeals = async () => {
-      try {
-        setLoading(true);
-        const dealsRef = collection(db, 'deals');
-        
-        // Log the current user ID for debugging
-        console.log('Fetching deals for user ID:', currentUser.uid);
-        
-        let q = query(
-          dealsRef,
-          where('userId', '==', currentUser.uid)
-        );
-        
-        // Log the query for debugging
-        console.log('Query:', q);
-        
-        const querySnapshot = await getDocs(q);
-        console.log('Found deals:', querySnapshot.size);
-        
-        const dealsData = [];
-        querySnapshot.forEach((doc) => {
-          console.log('Deal document:', doc.id, doc.data());
-          dealsData.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-        
-        setDeals(dealsData);
-      } catch (err) {
-        console.error('Error fetching deals:', err);
-        setError('Failed to load deals. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    if (currentUser) {
-      fetchDeals();
+  const fetchDeals = useCallback(async () => {
+    if (!currentUser) return;
+
+    try {
+      showLoading("Loading your deals...");
+      setDataLoaded(false);
+      
+      const dealsRef = collection(db, 'deals');
+      
+      console.log('Fetching deals for user ID:', currentUser.uid);
+      
+      let q = query(
+        dealsRef,
+        where('userId', '==', currentUser.uid)
+      );
+      
+      console.log('Query:', q);
+      
+      const querySnapshot = await getDocs(q);
+      console.log('Found deals:', querySnapshot.size);
+      
+      const dealsData = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log('Deal document:', doc.id, data);
+      
+        const dealData = {
+          id: doc.id,
+          customer: typeof data.customer === 'object' ? data.customer.name : data.customer,
+          vehicle: data.vehicle || {},
+          dateSold: data.dateSold || data.date || data.createdAt,
+          lenderName: data.lenderName || (data.lender && typeof data.lender === 'object' ? data.lender.name : data.lender) || 'N/A',
+          buyRate: data.buyRate || 0,
+          sellRate: data.sellRate || 0,
+          loanAmount: data.loanAmount || 0,
+          loanTerm: data.loanTerm || 0,
+          products: Array.isArray(data.products) ? data.products : [],
+          backEndProfit: data.backEndProfit || data.profit || 0,
+          ...data
+        };
+      
+        dealsData.push(dealData);
+      });
+      
+      setDeals(dealsData);
+      setError(null);
+      setDataLoaded(true);
+    } catch (err) {
+      console.error('Error fetching deals:', err);
+      setError('Failed to load deals. Please try again.');
+    } finally {
+      hideLoading();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    fetchDeals();
+  }, [fetchDeals]);
 
   const filterDeals = () => {
     if (!searchTerm.trim()) return deals;
     
     return deals.filter(deal => {
-      const customerMatch = deal.customer && deal.customer.toLowerCase().includes(searchTerm.toLowerCase());
-      const vehicleMatch = deal.vehicle && 
-        (
-          (deal.vehicle.year && deal.vehicle.year.toString().includes(searchTerm)) ||
-          (deal.vehicle.model && deal.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (deal.vehicle.vin && deal.vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
+      const customerName = typeof deal.customer === 'object' ? deal.customer.name : deal.customer;
+      const customerMatch = customerName && customerName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const vehicleMatch = deal.vehicle && (
+        (deal.vehicle.year && deal.vehicle.year.toString().includes(searchTerm)) ||
+        (deal.vehicle.model && deal.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (deal.vehicle.vin && deal.vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
       
       return customerMatch || vehicleMatch;
     });
@@ -160,10 +179,10 @@ function Deals() {
     return 0;
   };
 
-  const refreshDeals = () => {
-    setLoading(true);
-    fetchDeals().then(() => setLoading(false));
-  };
+  // Return null when data is loading - let the global spinner handle it
+  if (!dataLoaded && !error) {
+    return null;
+  }
 
   return (
     <div className="deals-container">
@@ -183,7 +202,7 @@ function Deals() {
             <span className="material-icons">add</span>
             New Deal
           </Link>
-          <button className="btn-refresh" onClick={refreshDeals}>
+          <button className="btn-refresh" onClick={fetchDeals}>
             <span className="material-icons">refresh</span>
             Refresh
           </button>
@@ -192,14 +211,17 @@ function Deals() {
 
       {error && <div className="error-message">{error}</div>}
 
-      {loading ? (
-        <div className="loading">Loading deals...</div>
-      ) : filteredDeals.length === 0 ? (
+      {filteredDeals.length === 0 ? (
         <div className="empty-state">
           <span className="material-icons">description</span>
           <h3>No deals found</h3>
-          <p>Start by creating your first deal</p>
+          <p>{deals.length > 0 ? 'No deals match your search criteria' : 'Start by creating your first deal'}</p>
           <Link to="/deals/new" className="btn-primary">Create Deal</Link>
+          {deals.length > 0 && searchTerm && (
+            <button onClick={() => setSearchTerm('')} className="btn-secondary">
+              Clear Search
+            </button>
+          )}
         </div>
       ) : (
         <div className="deals-table-container">

@@ -3,15 +3,17 @@ import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore
 import { db } from '../../firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
+import { useLoading } from '../../contexts/LoadingContext';
 import { getLenders } from '../../services/lenderService';
 import './NewDeal.scss';
 
 function NewDeal() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   const [lenders, setLenders] = useState([]);
   const [error, setError] = useState(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const { showLoading, hideLoading } = useLoading();
   
   // Form state
   const [customerName, setCustomerName] = useState('');
@@ -62,11 +64,15 @@ function NewDeal() {
   useEffect(() => {
     const fetchLenders = async () => {
       try {
+        showLoading("Loading lenders...");
         const lenderData = await getLenders();
         setLenders(lenderData);
+        setDataLoaded(true);
       } catch (err) {
         console.error('Error fetching lenders:', err);
         setError('Failed to load lenders. Please try again.');
+      } finally {
+        hideLoading();
       }
     };
     
@@ -167,7 +173,7 @@ function NewDeal() {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    showLoading("Saving deal...");
     setError(null);
     
     try {
@@ -244,13 +250,19 @@ function NewDeal() {
       const dealRef = await addDoc(collection(db, 'deals'), dealData);
       
       console.log('Deal saved successfully with ID:', dealRef.id);
+      hideLoading();
       navigate('/deals');
     } catch (err) {
       console.error('Error saving deal:', err);
       setError('Failed to save deal: ' + err.message);
-      setLoading(false);
+      hideLoading();
     }
   };
+  
+  // If still loading lenders, return nothing (global spinner will show)
+  if (!dataLoaded && !error) {
+    return null;
+  }
   
   return (
     <div className="new-deal-container">
@@ -259,9 +271,8 @@ function NewDeal() {
         <button 
           className="save-deal-btn"
           onClick={handleSubmit}
-          disabled={loading}
         >
-          {loading ? 'Saving...' : 'Save'}
+          Save
         </button>
       </div>
       

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
+import { useLoading } from '../../contexts/LoadingContext';
 import { getLenders } from '../../services/lenderService';
 import './DealDetails.scss';
 
@@ -11,12 +12,21 @@ function DealDetails() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [deal, setDeal] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [lenders, setLenders] = useState([]);
+  const { showLoading, hideLoading } = useLoading();
+  const [dataLoaded, setDataLoaded] = useState(false);
   
-  // Form state
+  const availableProducts = [
+    { id: 'warranty', name: 'Extended Warranty' },
+    { id: 'gap', name: 'GAP Insurance' },
+    { id: 'paintProtection', name: 'Paint Protection' },
+    { id: 'tireWheel', name: 'Tire & Wheel Protection' },
+    { id: 'keyReplacement', name: 'Key Replacement' },
+    { id: 'maintenance', name: 'Maintenance Plan' }
+  ];
+  
   const [formData, setFormData] = useState({
     customerName: '',
     customerPhone: '',
@@ -33,34 +43,32 @@ function DealDetails() {
   
   useEffect(() => {
     const fetchData = async () => {
+      if (!dealId || !currentUser) return;
+      
       try {
-        setLoading(true);
+        showLoading("Loading deal details...");
         setError(null);
         
-        // Fetch deal data from Firestore
         const dealDocRef = doc(db, 'deals', dealId);
         const dealSnapshot = await getDoc(dealDocRef);
         
         if (!dealSnapshot.exists()) {
           setError('Deal not found');
-          setLoading(false);
+          hideLoading();
           return;
         }
         
         const dealData = dealSnapshot.data();
         
-        // Check if the deal belongs to the current user
         if (dealData.userId !== currentUser.uid) {
           setError('You do not have permission to view this deal');
-          setLoading(false);
+          hideLoading();
           return;
         }
         
-        // Fetch lenders
         const lendersData = await getLenders();
         setLenders(lendersData);
         
-        // Transform deal data to match our component's format
         const formattedDeal = {
           id: dealId,
           customer: {
@@ -75,14 +83,16 @@ function DealDetails() {
           },
           deal: {
             lenderId: dealData.lenderId || '',
+            buyRate: dealData.buyRate || 0,
+            sellRate: dealData.sellRate || 0,
             apr: dealData.apr || 0,
             term: dealData.term || 0,
-            backEndProfit: dealData.profit || 0
+            backEndProfit: dealData.profit || 0,
+            loanAmount: dealData.loanAmount || 0
           },
           products: Array.isArray(dealData.products) ? 
             dealData.products.map(p => {
               if (typeof p === 'string') {
-                // Handle case where products might be just strings
                 return { type: p.toLowerCase().replace(/\s/g, ''), price: 0 };
               }
               return typeof p === 'object' ? p : { type: 'unknown', price: 0 };
@@ -96,7 +106,6 @@ function DealDetails() {
         
         setDeal(formattedDeal);
         
-        // Convert products array to object format for form
         const productsObj = {
           warranty: { selected: false, price: '' },
           gap: { selected: false, price: '' },
@@ -129,18 +138,70 @@ function DealDetails() {
           notes: formattedDeal.notes
         });
         
-        setLoading(false);
+        setDataLoaded(true);
       } catch (err) {
         console.error('Error fetching deal details:', err);
         setError('Failed to load deal details. Please try again.');
-        setLoading(false);
+      } finally {
+        hideLoading();
       }
     };
     
-    if (dealId && currentUser) {
-      fetchData();
-    }
+    fetchData();
   }, [dealId, currentUser]);
+  
+  const calculateFinanceReserve = (deal) => {
+    if (typeof deal === 'object' && deal !== null) {
+      if (deal.useManualReserve && deal.manualReserveAmount) {
+        return parseFloat(deal.manualReserveAmount);
+      }
+      
+      const buyRate = parseFloat(deal.buyRate || (deal.deal && deal.deal.buyRate) || 0);
+      const sellRate = parseFloat(deal.sellRate || (deal.deal && deal.deal.sellRate) || 0);
+      const loanAmount = parseFloat(deal.loanAmount || (deal.deal && deal.deal.loanAmount) || 0);
+      const loanTerm = parseInt(deal.loanTerm || (deal.deal && deal.deal.term) || 0);
+      
+      if (loanAmount && loanTerm && sellRate >= buyRate) {
+        const rateSpread = sellRate - buyRate;
+        const reservePercentage = rateSpread * 2;
+        
+        const cappedReservePercentage = Math.min(reservePercentage, 5);
+        return (loanAmount * (cappedReservePercentage / 100));
+      }
+    }
+    
+    return 0;
+  };
+
+  const calculateTotalProfit = (deal) => {
+    let productsProfit = 0;
+    
+    if (deal && deal.products && Array.isArray(deal.products)) {
+      productsProfit = deal.products.reduce((sum, product) => {
+        if (typeof product === 'object' && product !== null) {
+          const sold = parseFloat(product.soldPrice || product.price || 0);
+          const cost = parseFloat(product.cost || 0);
+          
+          if (sold && cost) {
+            return sum + (sold - cost);
+          }
+          
+          if (typeof product.profit === 'number' || (typeof product.profit === 'string' && !isNaN(parseFloat(product.profit)))) {
+            return sum + parseFloat(product.profit);
+          }
+        }
+        return sum;
+      }, 0);
+    }
+    
+    const financeReserve = calculateFinanceReserve(deal);
+    
+    const additionalProfit = parseFloat(
+      (deal.backEndProfit || deal.profit || (deal.deal && deal.deal.backEndProfit) || 0)
+    );
+    
+    return productsProfit + financeReserve + additionalProfit;
+  };
   
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -180,10 +241,9 @@ function DealDetails() {
   
   const handleUpdate = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    showLoading("Saving deal...");
     
     try {
-      // Construct the updated deal object with calculated profit
       const selectedProducts = Object.entries(formData.productData)
         .filter(([_, product]) => product.selected)
         .map(([key, product]) => {
@@ -199,10 +259,8 @@ function DealDetails() {
           };
         });
       
-      // Calculate total profit
       const totalProfit = calculateTotalProductsProfit();
       
-      // Create update object for Firestore
       const updateData = {
         customer: formData.customerName,
         customerPhone: formData.customerPhone,
@@ -215,17 +273,15 @@ function DealDetails() {
         lenderId: formData.lenderId,
         apr: parseFloat(formData.apr) || 0,
         term: parseInt(formData.term) || 0,
-        profit: totalProfit, // Automatically calculated profit
+        profit: totalProfit,
         products: selectedProducts,
         notes: formData.notes,
         updatedAt: serverTimestamp()
       };
       
-      // Update deal in Firestore
       await updateDoc(doc(db, 'deals', dealId), updateData);
       console.log('Deal updated successfully');
       
-      // Update local state
       const updatedFormattedDeal = {
         ...deal,
         customer: {
@@ -255,29 +311,29 @@ function DealDetails() {
       console.error('Error updating deal:', error);
       setError('Failed to update deal. Please try again.');
     } finally {
-      setLoading(false);
+      hideLoading();
     }
   };
   
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this deal?')) return;
     
-    setLoading(true);
+    showLoading("Deleting deal...");
     try {
-      // Delete deal from Firestore
       await deleteDoc(doc(db, 'deals', dealId));
       console.log('Deal deleted successfully');
       
+      hideLoading();
       navigate('/deals');
     } catch (error) {
       console.error('Error deleting deal:', error);
       setError('Failed to delete deal. Please try again.');
-      setLoading(false);
+      hideLoading();
     }
   };
   
-  if (loading) {
-    return <div className="loading">Loading deal details...</div>;
+  if (!dataLoaded && !error) {
+    return null;
   }
   
   if (error) {
@@ -312,16 +368,14 @@ function DealDetails() {
               <button 
                 className="cancel-btn"
                 onClick={() => setEditMode(false)}
-                disabled={loading}
               >
                 Cancel
               </button>
               <button 
                 className="save-btn"
                 onClick={handleUpdate}
-                disabled={loading}
               >
-                {loading ? 'Saving...' : 'Save Changes'}
+                Save Changes
               </button>
             </>
           ) : (
@@ -329,14 +383,12 @@ function DealDetails() {
               <button 
                 className="delete-btn"
                 onClick={handleDelete}
-                disabled={loading}
               >
                 Delete
               </button>
               <button 
                 className="edit-btn"
                 onClick={() => setEditMode(true)}
-                disabled={loading}
               >
                 Edit
               </button>
@@ -346,7 +398,6 @@ function DealDetails() {
       </div>
       
       {editMode ? (
-        // Edit Form
         <form className="deal-form" onSubmit={handleUpdate}>
           <div className="form-row">
             <div className="form-section">
@@ -515,7 +566,6 @@ function DealDetails() {
           </div>
         </form>
       ) : (
-        // View Mode
         <div className="deal-details-content">
           <div className="details-row">
             <div className="details-section">

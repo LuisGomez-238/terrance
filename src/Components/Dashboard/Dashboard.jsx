@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ReferenceLine } from 'recharts';
 import './Dashboard.scss';
 import { useProfile } from '../../contexts/ProfileContext';
+import { useLoading } from '../../contexts/LoadingContext';
 
 function Dashboard() {
   const { currentUser } = useAuth();
@@ -14,6 +15,9 @@ function Dashboard() {
   const profileContext = useProfile();
   const userProfile = profileContext?.userProfile || { monthlyTarget: 10000 };
   const profileLoading = profileContext?.loading || false;
+  
+  // Get loading functions from context
+  const { showLoading, hideLoading } = useLoading();
   
   // Initialize state for tracking whether the first data load has completed
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
@@ -278,12 +282,13 @@ function Dashboard() {
       return;
     }
 
+    showLoading();
+    
     try {
       setError(null);
       
       // First fetch the monthly target to ensure we have the latest
-      const latestGoal = await fetchUserMonthlyTarget();
-      console.log("Latest monthly goal:", latestGoal);
+      await fetchUserMonthlyTarget();
       
       // Then proceed with the rest of your existing code
       
@@ -471,8 +476,8 @@ function Dashboard() {
       });
       
       const avgProductsPerDeal = monthlyDeals.length > 0 ? monthlyProducts / monthlyDeals.length : 0;
-      const goalProgress = calculateGoalProgress(monthlyProfit, latestGoal);
-      console.log(`Monthly profit: ${monthlyProfit}, Goal: ${latestGoal}, Progress: ${goalProgress}%`);
+      const goalProgress = calculateGoalProgress(monthlyProfit, monthlyGoal);
+      console.log(`Monthly profit: ${monthlyProfit}, Goal: ${monthlyGoal}, Progress: ${goalProgress}%`);
       
       // Set statistics
       setStats({
@@ -483,7 +488,7 @@ function Dashboard() {
       });
       
       // Generate chart data with the latest goal
-      const trendData = generateProfitTrendData(userDeals, latestGoal);
+      const trendData = generateProfitTrendData(userDeals, monthlyGoal);
       const distributionData = generateProductDistribution(userDeals);
       
       console.log("Chart data generated:", { 
@@ -517,6 +522,7 @@ function Dashboard() {
       setMonthlyProfitData([]);
       setProductDistribution([]);
     } finally {
+      hideLoading();
       setLoading(false);
       setLastRefresh(new Date());
     }
@@ -588,9 +594,10 @@ function Dashboard() {
     return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,').replace(/\.00$/, '');
   };
 
-  // Combine both loading states
+  // Replace the simple loading check with a condition that doesn't show anything
+  // (since the loading screen will be shown via context)
   if (loading || profileLoading) {
-    return <div className="dashboard-loading">Loading dashboard data...</div>;
+    return null; // The global loading screen will be visible
   }
 
   return (

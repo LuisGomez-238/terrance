@@ -71,12 +71,37 @@ function sanitizeLenderData(lenderData) {
   
   // Ensure credit tiers are properly formatted
   if (sanitized.creditTiers && Array.isArray(sanitized.creditTiers)) {
-    sanitized.creditTiers = sanitized.creditTiers.map(tier => ({
-      name: tier.name || '',
-      minScore: Number(tier.minScore || 0),
-      maxLTV: Number(tier.maxLTV || 0),
-      rate: Number(tier.rate || 0)
-    }));
+    sanitized.creditTiers = sanitized.creditTiers.map(tier => {
+      // Process the tier basic information
+      const sanitizedTier = {
+        name: tier.name || '',
+        minScore: Number(tier.minScore || 0),
+        maxLTV: Number(tier.maxLTV || 0)
+      };
+      
+      // Add the old single rate field for backward compatibility
+      if (tier.rate !== undefined) {
+        sanitizedTier.rate = tier.rate === 'N/A' ? 'N/A' : Number(tier.rate || 0);
+      }
+      
+      // Process the rates object if it exists
+      if (tier.rates && typeof tier.rates === 'object') {
+        sanitizedTier.rates = {};
+        
+        // Process each term rate (60, 72, 84 months)
+        for (const [term, rate] of Object.entries(tier.rates)) {
+          // Special handling for 'N/A' values
+          if (rate === 'N/A') {
+            sanitizedTier.rates[term] = 'N/A';
+          } else if (rate !== '' && rate !== null && rate !== undefined) {
+            // Convert numeric strings to actual numbers
+            sanitizedTier.rates[term] = Number(rate);
+          }
+        }
+      }
+      
+      return sanitizedTier;
+    });
   }
   
   return sanitized;
@@ -103,6 +128,28 @@ function formatLenderData(lender) {
       requiresProofOfIncome: false
     }
   };
+  
+  // Ensure creditTiers have proper structure
+  if (formatted.creditTiers && Array.isArray(formatted.creditTiers)) {
+    formatted.creditTiers = formatted.creditTiers.map(tier => {
+      // Ensure the rates object exists
+      if (!tier.rates) {
+        tier.rates = {};
+        
+        // If we have an old-style single rate, convert it to the rates object format
+        if (tier.rate !== undefined && tier.rate !== 'N/A') {
+          // Set the same rate for all terms if we only have a single rate
+          tier.rates = {
+            '60': tier.rate,
+            '72': tier.rate,
+            '84': tier.rate
+          };
+        }
+      }
+      
+      return tier;
+    });
+  }
   
   return formatted;
 }

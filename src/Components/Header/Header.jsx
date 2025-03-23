@@ -2,19 +2,24 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
 import './Header.scss';
+import { useLoading } from '../../contexts/LoadingContext';
 
 function Header() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const { showLoading, hideLoading } = useLoading();
   
   async function handleLogout() {
     try {
+      showLoading("Logging out...");
       await logout();
       navigate('/login');
     } catch (error) {
       console.error('Failed to log out', error);
-    }
+    } finally {
+      hideLoading();
+    } 
   }
   
   return (
@@ -53,7 +58,6 @@ function Header() {
             </div>
             <div className="user-info">
               <span className="user-name">{currentUser?.displayName || 'User'}</span>
-              <span className="user-role">Finance Manager</span>
             </div>
             <span className="material-icons chevron-icon">
               expand_more

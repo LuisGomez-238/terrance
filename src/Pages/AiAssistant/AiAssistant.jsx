@@ -46,18 +46,21 @@ function AiAssistant() {
         
         lendersSnapshot.forEach(doc => {
           const data = doc.data();
+          console.log("Fetched lender data:", data.name, data);
           lendersData.push({
             id: doc.id,
             name: data.name || 'Unknown',
             type: data.type || 'Unknown',
-            tiers: data.tiers || '',
+            notes: data.notes || '',
             minScore: data.minScore || 0,
             maxLtv: data.maxLtv || 0,
-            tierDetails: data.tierDetails || [],
+            creditTiers: data.creditTiers || [],
+            vehicleRestrictions: data.vehicleRestrictions || {},
             backendGuidelines: data.backendGuidelines || {
               maxWarranty: 0,
               maxGap: 0
-            }
+            },
+            tierDetails: data.tierDetails || []
           });
         });
         

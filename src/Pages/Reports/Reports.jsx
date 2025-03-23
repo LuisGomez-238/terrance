@@ -6,6 +6,7 @@ import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import './Reports.scss';
 import { useProfile } from '../../contexts/ProfileContext';
+import { useLoading } from '../../contexts/LoadingContext';
 
 function Reports() {
   const { currentUser } = useAuth();
@@ -15,7 +16,7 @@ function Reports() {
   const userProfile = profileContext?.userProfile || { monthlyTarget: 10000 };
   const profileLoading = profileContext?.loading || false;
   
-  const [loading, setLoading] = useState(true);
+  // Remove local loading state
   const [error, setError] = useState(null);
   const [reportType, setReportType] = useState('monthly');
   const [timeRange, setTimeRange] = useState('6');
@@ -24,35 +25,13 @@ function Reports() {
   const [lenderData, setLenderData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [monthlyGoal, setMonthlyGoal] = useState(userProfile.monthlyTarget || 10000);
+  const [dataLoaded, setDataLoaded] = useState(false); // Track data loaded state
   
   // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A4DE6C', '#8884D8', '#FF6B6B'];
   
-  // Function to fetch the user's monthly target
-  const fetchUserMonthlyTarget = async () => {
-    if (!currentUser) return;
-    
-    try {
-      const userDocRef = doc(db, 'users', currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        if (userData.monthlyTarget) {
-          console.log("Using user's monthly target:", userData.monthlyTarget);
-          const targetValue = Number(userData.monthlyTarget);
-          setMonthlyGoal(targetValue || 10000);
-          return targetValue;
-        }
-      } else {
-        console.log("No user document found, using default target");
-      }
-    } catch (error) {
-      console.error("Error fetching user's monthly target:", error);
-    }
-    
-    return monthlyGoal; // Return current value as fallback
-  };
+  // Get loading functions from context
+  const { showLoading, hideLoading } = useLoading();
   
   // Update useEffect to react to profile changes
   useEffect(() => {
@@ -62,13 +41,39 @@ function Reports() {
     }
   }, [userProfile.monthlyTarget]);
   
+  // Main effect for fetching report data
   useEffect(() => {
     const fetchReportData = async () => {
-      setLoading(true);
-      setError(null);
+      showLoading("Generating your reports...");
+      setDataLoaded(false);
       
       try {
         // First, ensure we have the latest monthly target
+        const fetchUserMonthlyTarget = async () => {
+          if (!currentUser) return monthlyGoal;
+          
+          try {
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (userData.monthlyTarget) {
+                console.log("Using user's monthly target:", userData.monthlyTarget);
+                const targetValue = Number(userData.monthlyTarget);
+                setMonthlyGoal(targetValue || 10000);
+                return targetValue;
+              }
+            } else {
+              console.log("No user document found, using default target");
+            }
+          } catch (error) {
+            console.error("Error fetching user's monthly target:", error);
+          }
+          
+          return monthlyGoal;
+        };
+        
         await fetchUserMonthlyTarget();
         
         const months = parseInt(timeRange);
@@ -103,7 +108,6 @@ function Reports() {
         
         console.log('Fetched deals:', dealsSnapshot.size);
         dealsSnapshot.forEach(doc => {
-          console.log('Deal data:', doc.id, doc.data());
           const dealData = doc.data();
           
           // Skip deals without required data
@@ -209,16 +213,17 @@ function Reports() {
         setMonthlyData(monthlyProfitData);
         setProductData(productChartData);
         setLenderData(lenderChartData);
-        setLoading(false);
+        setDataLoaded(true);
       } catch (error) {
         console.error('Error fetching report data:', error);
         setError('Failed to load report data. Please try again.');
-        setLoading(false);
+      } finally {
+        hideLoading();
       }
     };
     
     fetchReportData();
-  }, [timeRange, reportType, currentUser, selectedYear]);
+  }, [currentUser, timeRange, reportType, selectedYear, monthlyGoal]);
   
   const exportToCsv = () => {
     let csvContent = "";
@@ -259,8 +264,9 @@ function Reports() {
     document.body.removeChild(link);
   };
   
-  if (loading || profileLoading) {
-    return <div className="loading">Loading report data...</div>;
+  // Return null when data is loading to let the global spinner handle it
+  if (!dataLoaded && !error) {
+    return null;
   }
   
   if (error) {
@@ -300,255 +306,251 @@ function Reports() {
         </div>
       </div>
       
-      {loading ? (
-        <div className="loading">Loading report data...</div>
-      ) : (
-        <div className="report-content">
-          {reportType === 'monthly' && (
-            <div className="report-section">
-              <h2>Monthly Performance Summary</h2>
-              <div className="stats-summary">
-                <div className="stat-card">
-                  <h3>Total Deals</h3>
-                  <p className="stat-value">
-                    {monthlyData.reduce((sum, month) => sum + month.deals, 0)}
-                  </p>
-                </div>
-                <div className="stat-card">
-                  <h3>Total Back-End Profit</h3>
-                  <p className="stat-value">
-                    ${monthlyData.reduce((sum, month) => sum + month.backEndProfit, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </p>
-                </div>
-                <div className="stat-card">
-                  <h3>Avg Profit per Deal</h3>
-                  <p className="stat-value">
-                    ${(monthlyData.reduce((sum, month) => sum + (month.avgProfit * month.deals), 0) / 
-                    monthlyData.reduce((sum, month) => sum + month.deals, 0) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </p>
-                </div>
-                <div className="stat-card">
-                  <h3>Avg Products per Deal</h3>
-                  <p className="stat-value">
-                    {(monthlyData.reduce((sum, month) => sum + (month.productsPerDeal * month.deals), 0) / 
-                    monthlyData.reduce((sum, month) => sum + month.deals, 0) || 0).toFixed(1)}
-                  </p>
-                </div>
+      <div className="report-content">
+        {reportType === 'monthly' && (
+          <div className="report-section">
+            <h2>Monthly Performance Summary</h2>
+            <div className="stats-summary">
+              <div className="stat-card">
+                <h3>Total Deals</h3>
+                <p className="stat-value">
+                  {monthlyData.reduce((sum, month) => sum + month.deals, 0)}
+                </p>
               </div>
-              
-              {monthlyData.length > 0 ? (
-                <>
-                  <div className="chart-container">
-                    <h3>Monthly Profit Trend</h3>
-                    <div className="chart-wrapper">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                          <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                          <Tooltip formatter={(value, name) => {
-                            if (name === 'backEndProfit') return [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Back-End Profit'];
-                            if (name === 'deals') return [value, 'Deals'];
-                            return [value, name];
-                          }} />
-                          <Legend />
-                          <Line yAxisId="left" type="monotone" dataKey="backEndProfit" name="Back-End Profit" stroke="#8884d8" activeDot={{ r: 8 }} />
-                          <Line yAxisId="left" type="monotone" dataKey="goal" name="Monthly Goal" stroke="#ff7300" strokeDasharray="5 5" />
-                          <Line yAxisId="right" type="monotone" dataKey="deals" name="Number of Deals" stroke="#82ca9d" />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
+              <div className="stat-card">
+                <h3>Total Back-End Profit</h3>
+                <p className="stat-value">
+                  ${monthlyData.reduce((sum, month) => sum + month.backEndProfit, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </p>
+              </div>
+              <div className="stat-card">
+                <h3>Avg Profit per Deal</h3>
+                <p className="stat-value">
+                  ${(monthlyData.reduce((sum, month) => sum + (month.avgProfit * month.deals), 0) / 
+                  monthlyData.reduce((sum, month) => sum + month.deals, 0) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </p>
+              </div>
+              <div className="stat-card">
+                <h3>Avg Products per Deal</h3>
+                <p className="stat-value">
+                  {(monthlyData.reduce((sum, month) => sum + (month.productsPerDeal * month.deals), 0) / 
+                  monthlyData.reduce((sum, month) => sum + month.deals, 0) || 0).toFixed(1)}
+                </p>
+              </div>
+            </div>
+            
+            {monthlyData.length > 0 ? (
+              <>
+                <div className="chart-container">
+                  <h3>Monthly Profit Trend</h3>
+                  <div className="chart-wrapper">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                        <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                        <Tooltip formatter={(value, name) => {
+                          if (name === 'backEndProfit') return [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Back-End Profit'];
+                          if (name === 'deals') return [value, 'Deals'];
+                          return [value, name];
+                        }} />
+                        <Legend />
+                        <Line yAxisId="left" type="monotone" dataKey="backEndProfit" name="Back-End Profit" stroke="#8884d8" activeDot={{ r: 8 }} />
+                        <Line yAxisId="left" type="monotone" dataKey="goal" name="Monthly Goal" stroke="#ff7300" strokeDasharray="5 5" />
+                        <Line yAxisId="right" type="monotone" dataKey="deals" name="Number of Deals" stroke="#82ca9d" />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
-                  
-                  <div className="chart-container">
-                    <h3>Average Profit per Deal</h3>
-                    <div className="chart-wrapper">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip formatter={(value) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Avg Profit']} />
-                          <Bar dataKey="avgProfit" name="Avg Profit per Deal" fill="#3f87f5" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="no-data-message">
-                  <p>No deal data available for the selected time period.</p>
                 </div>
+                
+                <div className="chart-container">
+                  <h3>Average Profit per Deal</h3>
+                  <div className="chart-wrapper">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Avg Profit']} />
+                        <Bar dataKey="avgProfit" name="Avg Profit per Deal" fill="#3f87f5" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="no-data-message">
+                <p>No deal data available for the selected time period.</p>
+              </div>
+            )}
+            
+            <div className="data-table">
+              <h3>Monthly Data</h3>
+              {monthlyData.length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Deals</th>
+                      <th>Back-End Profit</th>
+                      <th>Avg Profit</th>
+                      <th>Products/Deal</th>
+                      <th>Goal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyData.map((month, index) => (
+                      <tr key={index}>
+                        <td>{month.month}</td>
+                        <td>{month.deals}</td>
+                        <td>${month.backEndProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${month.avgProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>{month.productsPerDeal.toFixed(1)}</td>
+                        <td>${month.goal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="no-data">No data available for the selected time period.</p>
               )}
-              
-              <div className="data-table">
-                <h3>Monthly Data</h3>
-                {monthlyData.length > 0 ? (
+            </div>
+          </div>
+        )}
+        
+        {reportType === 'products' && (
+          <div className="report-section">
+            <h2>Product Distribution Analysis</h2>
+            {productData.length > 0 ? (
+              <>
+                <div className="chart-container">
+                  <h3>Product Distribution</h3>
+                  <div className="chart-wrapper">
+                    <ResponsiveContainer width="100%" height={400}>
+                      <PieChart>
+                        <Pie
+                          data={productData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={true}
+                          label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={150}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {productData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name, props) => [`${value} sales`, props.payload.name]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                <div className="data-table">
+                  <h3>Product Sales</h3>
                   <table>
                     <thead>
                       <tr>
-                        <th>Month</th>
-                        <th>Deals</th>
-                        <th>Back-End Profit</th>
-                        <th>Avg Profit</th>
-                        <th>Products/Deal</th>
-                        <th>Goal</th>
+                        <th>Product</th>
+                        <th>Sales</th>
+                        <th>Percentage</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {monthlyData.map((month, index) => (
+                      {productData.map((product, index) => {
+                        const totalSales = productData.reduce((sum, p) => sum + p.value, 0);
+                        const percentage = totalSales > 0 ? (product.value / totalSales * 100).toFixed(1) : '0.0';
+                        
+                        return (
+                          <tr key={index}>
+                            <td>{product.name}</td>
+                            <td>{product.value}</td>
+                            <td>{percentage}%</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="no-data-message">
+                <p>No product data available for the selected time period.</p>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {reportType === 'lenders' && (
+          <div className="report-section">
+            <h2>Lender Performance Analysis</h2>
+            {lenderData.length > 0 ? (
+              <>
+                <div className="chart-container">
+                  <h3>Deals by Lender</h3>
+                  <div className="chart-wrapper">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={lenderData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="deals" name="Deals" fill="#8884d8" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                <div className="chart-container">
+                  <h3>Average Profit by Lender</h3>
+                  <div className="chart-wrapper">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={lenderData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Avg Profit']} />
+                        <Bar dataKey="avgProfit" name="Avg Profit per Deal" fill="#82ca9d" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                <div className="data-table">
+                  <h3>Lender Performance</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Lender</th>
+                        <th>Deals</th>
+                        <th>Total Profit</th>
+                        <th>Avg Profit per Deal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lenderData.map((lender, index) => (
                         <tr key={index}>
-                          <td>{month.month}</td>
-                          <td>{month.deals}</td>
-                          <td>${month.backEndProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                          <td>${month.avgProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                          <td>{month.productsPerDeal.toFixed(1)}</td>
-                          <td>${month.goal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                          <td>{lender.name}</td>
+                          <td>{lender.deals}</td>
+                          <td>${lender.profit.toLocaleString(undefined, {minimumFractionDigits:.2, maximumFractionDigits: 2})}</td>
+                          <td>${lender.avgProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                ) : (
-                  <p className="no-data">No data available for the selected time period.</p>
-                )}
+                </div>
+              </>
+            ) : (
+              <div className="no-data-message">
+                <p>No lender data available for the selected time period.</p>
               </div>
-            </div>
-          )}
-          
-          {reportType === 'products' && (
-            <div className="report-section">
-              <h2>Product Distribution Analysis</h2>
-              {productData.length > 0 ? (
-                <>
-                  <div className="chart-container">
-                    <h3>Product Distribution</h3>
-                    <div className="chart-wrapper">
-                      <ResponsiveContainer width="100%" height={400}>
-                        <PieChart>
-                          <Pie
-                            data={productData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={true}
-                            label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={150}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {productData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value, name, props) => [`${value} sales`, props.payload.name]} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  
-                  <div className="data-table">
-                    <h3>Product Sales</h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Product</th>
-                          <th>Sales</th>
-                          <th>Percentage</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {productData.map((product, index) => {
-                          const totalSales = productData.reduce((sum, p) => sum + p.value, 0);
-                          const percentage = totalSales > 0 ? (product.value / totalSales * 100).toFixed(1) : '0.0';
-                          
-                          return (
-                            <tr key={index}>
-                              <td>{product.name}</td>
-                              <td>{product.value}</td>
-                              <td>{percentage}%</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              ) : (
-                <div className="no-data-message">
-                  <p>No product data available for the selected time period.</p>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {reportType === 'lenders' && (
-            <div className="report-section">
-              <h2>Lender Performance Analysis</h2>
-              {lenderData.length > 0 ? (
-                <>
-                  <div className="chart-container">
-                    <h3>Deals by Lender</h3>
-                    <div className="chart-wrapper">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={lenderData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="deals" name="Deals" fill="#8884d8" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  
-                  <div className="chart-container">
-                    <h3>Average Profit by Lender</h3>
-                    <div className="chart-wrapper">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={lenderData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip formatter={(value) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Avg Profit']} />
-                          <Bar dataKey="avgProfit" name="Avg Profit per Deal" fill="#82ca9d" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  
-                  <div className="data-table">
-                    <h3>Lender Performance</h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Lender</th>
-                          <th>Deals</th>
-                          <th>Total Profit</th>
-                          <th>Avg Profit per Deal</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {lenderData.map((lender, index) => (
-                          <tr key={index}>
-                            <td>{lender.name}</td>
-                            <td>{lender.deals}</td>
-                            <td>${lender.profit.toLocaleString(undefined, {minimumFractionDigits:.2, maximumFractionDigits: 2})}</td>
-                            <td>${lender.avgProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              ) : (
-                <div className="no-data-message">
-                  <p>No lender data available for the selected time period.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

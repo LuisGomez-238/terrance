@@ -4,6 +4,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import './Profile.scss';
+import { useLoading } from '../../contexts/LoadingContext';
 
 function Profile() {
   const { currentUser, updateUserProfile } = useAuth();
