@@ -377,27 +377,25 @@ function LenderDetails() {
             
             <div className="details-section">
               <h2>Credit Tiers</h2>
-              <div className="tiers-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Tier</th>
-                      <th>Score</th>
-                      <th>Max LTV</th>
-                      <th>APR</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lender.tiers.map((tier, index) => (
-                      <tr key={index}>
-                        <td>{tier.tier}</td>
-                        <td>{tier.score}</td>
-                        <td>{tier.maxLtv}</td>
-                        <td>{tier.apr}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="tier-table">
+                <div className="tier-header-row">
+                  <div>Tier</div>
+                  <div>Min Score</div>
+                  <div>Max LTV</div>
+                  <div>60mo Rate</div>
+                  <div>72mo Rate</div>
+                  <div>84mo Rate</div>
+                </div>
+                {lender.tiers.map((tier, index) => (
+                  <div className="tier-data-row" key={index}>
+                    <div>{tier.tier}</div>
+                    <div>{tier.score}</div>
+                    <div>{tier.maxLtv}%</div>
+                    <div className={tier.apr === 'N/A' ? 'rate-na' : ''}>
+                      {tier.apr === 'N/A' ? 'N/A' : tier.apr}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

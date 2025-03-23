@@ -666,6 +666,26 @@ function DealDetails() {
               </span>
             </div>
           </div>
+          
+          <div className="profit-breakdown">
+            <h3>Profit Breakdown</h3>
+            <div className="breakdown-item">
+              <span className="label">Product Profit:</span>
+              <span className="value">${calculateTotalProductsProfit().toFixed(2)}</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="label">Finance Reserve:</span>
+              <span className="value">${calculateFinanceReserve(deal).toFixed(2)}</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="label">Additional Profit:</span>
+              <span className="value">${parseFloat(deal.deal.backEndProfit || deal.deal.profit || 0).toFixed(2)}</span>
+            </div>
+            <div className="breakdown-item total">
+              <span className="label">Total Profit:</span>
+              <span className="value">${calculateTotalProfit(deal).toFixed(2)}</span>
+            </div>
+          </div>
         </div>
       )}
     </div>

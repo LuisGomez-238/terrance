@@ -50,6 +50,15 @@ function NewDeal() {
     }), {})
   );
   
+  // Add these new state variables
+  const [dateSold, setDateSold] = useState('');
+  const [buyRate, setBuyRate] = useState('');
+  const [sellRate, setSellRate] = useState('');
+  const [loanAmount, setLoanAmount] = useState('');
+  const [loanTerm, setLoanTerm] = useState('');
+  const [useManualReserve, setUseManualReserve] = useState(false);
+  const [manualReserveAmount, setManualReserveAmount] = useState('');
+  
   useEffect(() => {
     const fetchLenders = async () => {
       try {
@@ -123,6 +132,39 @@ function NewDeal() {
     }, 0);
   };
   
+  // Add this function to calculate finance reserve
+  const calculateFinanceReserve = () => {
+    // If manual reserve is specified, use that value
+    if (useManualReserve && manualReserveAmount) {
+      return parseFloat(manualReserveAmount);
+    }
+    
+    // Otherwise calculate based on rates and loan amount
+    const buyRateValue = parseFloat(buyRate || 0);
+    const sellRateValue = parseFloat(sellRate || 0);
+    const loanAmountValue = parseFloat(loanAmount || 0);
+    const loanTermValue = parseInt(loanTerm || 0);
+    
+    if (loanAmountValue && loanTermValue && sellRateValue >= buyRateValue) {
+      // Standard formula for reserve calculation
+      const rateSpread = sellRateValue - buyRateValue;
+      const reservePercentage = rateSpread * 2; // Typical 2:1 ratio
+      
+      // Cap at 5% maximum reserve
+      const cappedReservePercentage = Math.min(reservePercentage, 5);
+      return (loanAmountValue * (cappedReservePercentage / 100));
+    }
+    
+    return 0;
+  };
+  
+  // Function to calculate total profit (products + finance reserve)
+  const calculateTotalProfit = () => {
+    const productsProfit = calculateTotalProductsProfit();
+    const financeReserve = calculateFinanceReserve();
+    return productsProfit + financeReserve;
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -146,8 +188,14 @@ function NewDeal() {
           };
         });
       
-      // Calculate total profit from products
-      const totalProfit = calculateTotalProductsProfit();
+      // Calculate total product profit
+      const productsProfit = calculateTotalProductsProfit();
+      
+      // Calculate finance reserve
+      const financeReserve = calculateFinanceReserve();
+      
+      // Calculate total profit
+      const totalProfit = productsProfit + financeReserve;
       
       // Create a well-structured deal object
       const dealData = {
@@ -164,15 +212,24 @@ function NewDeal() {
         },
         
         // Deal information
-        date: new Date(),
+        createdAt: serverTimestamp(),
+        dateSold: dateSold ? new Date(dateSold) : new Date(),
         lenderId: selectedLender,
         lenderName: lenders.find(l => l.id === selectedLender)?.name || '',
-        apr: parseFloat(apr) || 0,
-        term: parseInt(term) || 0,
+        
+        // Finance information
+        buyRate: parseFloat(buyRate) || 0,
+        sellRate: parseFloat(sellRate) || 0,
+        loanAmount: parseFloat(loanAmount) || 0,
+        loanTerm: parseInt(loanTerm) || 0,
+        useManualReserve: useManualReserve,
+        manualReserveAmount: parseFloat(manualReserveAmount) || 0,
         
         // Products and profit
         products: selectedProductsList,
-        profit: totalProfit, // Automatically calculated profit
+        productsProfit: productsProfit,
+        financeReserve: financeReserve,
+        totalProfit: totalProfit,
         
         // Additional information
         notes: notes || '',
@@ -323,6 +380,131 @@ function NewDeal() {
             <div className="form-group calculated-profit">
               <label>Backend Profit (calculated)</label>
               <div className="profit-display">${calculateTotalProductsProfit().toFixed(2)}</div>
+            </div>
+          </div>
+          
+          <div className="form-section">
+            <h2>Finance Details</h2>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="dateSold">Date Sold</label>
+                <input
+                  id="dateSold"
+                  type="date"
+                  value={dateSold}
+                  onChange={(e) => setDateSold(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="buyRate">Buy Rate (%)</label>
+                <input
+                  id="buyRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={buyRate}
+                  onChange={(e) => setBuyRate(e.target.value)}
+                  placeholder="E.g., 4.99"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="sellRate">Sell Rate (%)</label>
+                <input
+                  id="sellRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={sellRate}
+                  onChange={(e) => {
+                    setSellRate(e.target.value);
+                    // If sell rate is less than buy rate, show warning
+                    if (parseFloat(e.target.value) < parseFloat(buyRate)) {
+                      setError('Warning: Sell rate is lower than buy rate');
+                    } else {
+                      setError(null);
+                    }
+                  }}
+                  placeholder="E.g., 5.99"
+                />
+              </div>
+            </div>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="loanAmount">Loan Amount ($)</label>
+                <input
+                  id="loanAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={loanAmount}
+                  onChange={(e) => setLoanAmount(e.target.value)}
+                  placeholder="Total amount financed"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="loanTerm">Loan Term (months)</label>
+                <input
+                  id="loanTerm"
+                  type="number"
+                  min="1"
+                  value={loanTerm}
+                  onChange={(e) => setLoanTerm(e.target.value)}
+                  placeholder="E.g., 60, 72"
+                />
+              </div>
+            </div>
+            
+            {/* Manual Reserve Option */}
+            <div className="form-row">
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={useManualReserve}
+                    onChange={(e) => setUseManualReserve(e.target.checked)}
+                  />
+                  Manually enter reserve amount
+                </label>
+              </div>
+            </div>
+            
+            {useManualReserve && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="manualReserveAmount">Reserve Amount ($)</label>
+                  <input
+                    id="manualReserveAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={manualReserveAmount}
+                    onChange={(e) => setManualReserveAmount(e.target.value)}
+                    placeholder="Enter reserve amount"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="finance-summary">
+              <div className="summary-row">
+                <span className="label">Finance Reserve:</span>
+                <span className="value reserve">${calculateFinanceReserve().toFixed(2)}</span>
+              </div>
+              <div className="summary-row">
+                <span className="label">Product Profit:</span>
+                <span className="value">${calculateTotalProductsProfit().toFixed(2)}</span>
+              </div>
+              <div className="summary-row total">
+                <span className="label">Total Profit:</span>
+                <span className="value">${calculateTotalProfit().toFixed(2)}</span>
+              </div>
             </div>
           </div>
           

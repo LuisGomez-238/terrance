@@ -48,11 +48,12 @@ function AiAssistant() {
         
         setLenders(lendersData);
         
-        // Fetch recent deals
+        // Fetch recent deals - only for current user
         try {
           const dealsRef = collection(db, 'deals');
           const recentDealsQuery = query(
             dealsRef,
+            where('userId', '==', currentUser.uid), // Filter by current user
             orderBy('createdAt', 'desc'),
             limit(20)
           );
@@ -101,9 +102,10 @@ function AiAssistant() {
         } catch (dealsError) {
           console.error('Error fetching deals:', dealsError);
           
-          // Fallback query without orderBy if index doesn't exist
+          // Fallback query without orderBy if index doesn't exist, but still filtered by user
           const fallbackQuery = query(
             collection(db, 'deals'),
+            where('userId', '==', currentUser.uid), // Filter by current user
             limit(20)
           );
           
@@ -156,7 +158,7 @@ function AiAssistant() {
     };
     
     fetchData();
-  }, []);
+  }, [currentUser]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -287,7 +289,7 @@ function AiAssistant() {
       
       <div className="ai-assistant-footer">
         <p className="assistant-info">
-          Terrance, your F&I Director with 20+ years of automotive finance experience.
+          Terrance, your personal F&I Director with 20+ years of automotive finance experience.
         </p>
       </div>
     </div>

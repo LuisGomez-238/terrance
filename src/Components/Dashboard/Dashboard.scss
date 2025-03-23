@@ -162,66 +162,75 @@
     
     .dashboard-charts {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-      gap: $spacing-xl;
-      margin-bottom: $spacing-xl;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
       
-      @media (max-width: $breakpoint-lg) {
+      @media (max-width: 992px) {
         grid-template-columns: 1fr;
       }
       
       .chart-card {
-        background-color: white;
-        border-radius: $border-radius-lg;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        padding: $spacing-lg;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
         
         h2 {
-          margin-top: 0;
-          margin-bottom: $spacing-lg;
-          font-size: $font-size-lg;
-          color: $text-primary;
           display: flex;
           align-items: center;
+          margin-top: 0;
+          margin-bottom: 1.5rem;
+          font-size: 1.2rem;
+          color: #333;
           
           .chart-icon {
-            margin-right: $spacing-sm;
-            color: $kia-red;
+            margin-right: 0.5rem;
+            color: #555;
           }
         }
         
         .chart-container {
           height: 300px;
-          transition: opacity 0.3s;
+          width: 100%;
+          margin-bottom: 1rem;
           
-          .chart-placeholder {
+          .no-data-message {
+            height: 100%;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100%;
-            background-color: $bg-light;
-            border-radius: $border-radius-md;
-            color: $text-secondary;
-            font-style: italic;
+            color: #777;
+            
+            .material-icons {
+              font-size: 2.5rem;
+              margin-bottom: 1rem;
+              color: #aaa;
+            }
+            
+            p {
+              font-size: 1rem;
+            }
           }
         }
         
         .chart-legend {
           display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
           justify-content: center;
-          gap: $spacing-md;
-          margin-top: $spacing-md;
           
           .legend-item {
             display: flex;
             align-items: center;
-            font-size: $font-size-sm;
+            font-size: 0.85rem;
             
             .legend-color {
               width: 12px;
               height: 12px;
-              border-radius: 3px;
-              margin-right: $spacing-xs;
+              border-radius: 50%;
+              margin-right: 6px;
             }
           }
         }
@@ -344,3 +353,44 @@
       }
     }
   }
+
+// Tooltip styles
+.custom-tooltip {
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  
+  .tooltip-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+  }
+  
+  .tooltip-profit {
+    color: #e51b23;
+    margin: 2px 0;
+  }
+  
+  .tooltip-goal {
+    color: #777;
+    margin: 2px 0;
+  }
+  
+  .tooltip-percent {
+    font-weight: 500;
+    margin-top: 5px;
+  }
+}
+
+// Add responsive styles for mobile
+@media (max-width: 768px) {
+  .dashboard-charts {
+    .chart-card {
+      .chart-container {
+        height: 250px;
+      }
+    }
+  }
+}

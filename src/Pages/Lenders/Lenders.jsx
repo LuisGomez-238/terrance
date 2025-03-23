@@ -21,15 +21,50 @@ function Lenders() {
     phone: '',
     notes: '',
     
-    // Credit tier guidelines
+    // Credit tier guidelines with term-specific rates
     creditTiers: [
-      { name: 'Tier 1/A', minScore: 740, maxLTV: 150, rate: 4.99 },
-      { name: 'Tier 2/B', minScore: 700, maxLTV: 140, rate: 5.99 },
-      { name: 'Tier 3/C', minScore: 660, maxLTV: 130, rate: 7.99 },
-      { name: 'Tier 4/D', minScore: 620, maxLTV: 120, rate: 9.99 },
-      { name: 'Tier 5/E', minScore: 580, maxLTV: 110, rate: 12.99 },
-      { name: 'Tier 6/F', minScore: 540, maxLTV: 100, rate: 15.99 },
-      { name: 'Tier 7/G', minScore: 500, maxLTV: 90, rate: 18.99 },
+      { 
+        name: 'Tier 1/A', 
+        minScore: 740, 
+        maxLTV: 150, 
+        rates: { '60': 4.49, '72': 4.99, '84': 5.49 }
+      },
+      { 
+        name: 'Tier 2/B', 
+        minScore: 700, 
+        maxLTV: 140, 
+        rates: { '60': 5.49, '72': 5.99, '84': 6.49 }
+      },
+      { 
+        name: 'Tier 3/C', 
+        minScore: 660, 
+        maxLTV: 130, 
+        rates: { '60': 6.99, '72': 7.99, '84': 8.99 }
+      },
+      { 
+        name: 'Tier 4/D', 
+        minScore: 620, 
+        maxLTV: 120, 
+        rates: { '60': 8.99, '72': 9.99, '84': 10.99 }
+      },
+      { 
+        name: 'Tier 5/E', 
+        minScore: 580, 
+        maxLTV: 110, 
+        rates: { '60': 11.99, '72': 12.99, '84': 13.99 }
+      },
+      { 
+        name: 'Tier 6/F', 
+        minScore: 540, 
+        maxLTV: 100, 
+        rates: { '60': 14.99, '72': 15.99, '84': 16.99 }
+      },
+      { 
+        name: 'Tier 7/G', 
+        minScore: 500, 
+        maxLTV: 90, 
+        rates: { '60': 17.99, '72': 18.99, '84': 19.99 }
+      },
     ],
     
     // Vehicle restrictions
@@ -46,7 +81,10 @@ function Lenders() {
       maxGapAmount: '',
       maxTotalBackend: '',
       backendOnTopOfLTV: false,
-      backendIncludedInLTV: true,
+      backendIncludedInLTV: true, 
+      maxBackendPercent: '',
+      requiresIncome: false,
+      requiresProofOfIncome: false,
     }
   });
   
@@ -91,8 +129,8 @@ function Lenders() {
         
         // Credit tier guidelines - use existing or default
         creditTiers: lender.creditTiers || [
-          { name: 'Tier 1/A', minScore: 740, maxLTV: 150, rate: 4.99 },
-          { name: 'Tier 2/B', minScore: 700, maxLTV: 140, rate: 5.99 },
+          { name: 'Tier 1/A', minScore: 740, maxLTV: 150, rates: { '60': 4.49, '72': 4.99, '84': 5.49 } },
+          { name: 'Tier 2/B', minScore: 700, maxLTV: 140, rates: { '60': 5.49, '72': 5.99, '84': 6.49 } },
           { name: 'Tier 3/C', minScore: 660, maxLTV: 130, rate: 7.99 },
           { name: 'Tier 4/D', minScore: 620, maxLTV: 120, rate: 9.99 },
           { name: 'Tier 5/E', minScore: 580, maxLTV: 110, rate: 12.99 },
@@ -131,15 +169,50 @@ function Lenders() {
         phone: '',
         notes: '',
         
-        // Credit tier guidelines
+        // Credit tier guidelines with term-specific rates
         creditTiers: [
-          { name: 'Tier 1/A', minScore: 740, maxLTV: 150, rate: 4.99 },
-          { name: 'Tier 2/B', minScore: 700, maxLTV: 140, rate: 5.99 },
-          { name: 'Tier 3/C', minScore: 660, maxLTV: 130, rate: 7.99 },
-          { name: 'Tier 4/D', minScore: 620, maxLTV: 120, rate: 9.99 },
-          { name: 'Tier 5/E', minScore: 580, maxLTV: 110, rate: 12.99 },
-          { name: 'Tier 6/F', minScore: 540, maxLTV: 100, rate: 15.99 },
-          { name: 'Tier 7/G', minScore: 500, maxLTV: 90, rate: 18.99 },
+          { 
+            name: 'Tier 1/A', 
+            minScore: 740, 
+            maxLTV: 150, 
+            rates: { '60': 4.49, '72': 4.99, '84': 5.49 }
+          },
+          { 
+            name: 'Tier 2/B', 
+            minScore: 700, 
+            maxLTV: 140, 
+            rates: { '60': 5.49, '72': 5.99, '84': 6.49 }
+          },
+          { 
+            name: 'Tier 3/C', 
+            minScore: 660, 
+            maxLTV: 130, 
+            rates: { '60': 6.99, '72': 7.99, '84': 8.99 }
+          },
+          { 
+            name: 'Tier 4/D', 
+            minScore: 620, 
+            maxLTV: 120, 
+            rates: { '60': 8.99, '72': 9.99, '84': 10.99 }
+          },
+          { 
+            name: 'Tier 5/E', 
+            minScore: 580, 
+            maxLTV: 110, 
+            rates: { '60': 11.99, '72': 12.99, '84': 13.99 }
+          },
+          { 
+            name: 'Tier 6/F', 
+            minScore: 540, 
+            maxLTV: 100, 
+            rates: { '60': 14.99, '72': 15.99, '84': 16.99 }
+          },
+          { 
+            name: 'Tier 7/G', 
+            minScore: 500, 
+            maxLTV: 90, 
+            rates: { '60': 17.99, '72': 18.99, '84': 19.99 }
+          },
         ],
         
         // Vehicle restrictions
@@ -191,6 +264,23 @@ function Lenders() {
     });
   };
   
+  const handleTierRateChange = (tierIndex, term, value) => {
+    const updatedTiers = [...formData.creditTiers];
+    
+    // Initialize rates object if it doesn't exist
+    if (!updatedTiers[tierIndex].rates) {
+      updatedTiers[tierIndex].rates = {};
+    }
+    
+    // Update the specific term rate
+    updatedTiers[tierIndex].rates[term] = value;
+    
+    setFormData({
+      ...formData,
+      creditTiers: updatedTiers
+    });
+  };
+  
   const handleVehicleRestrictionsChange = (field, value) => {
     setFormData({
       ...formData,
@@ -220,12 +310,41 @@ function Lenders() {
     try {
       setLoading(true);
       
+      // Clean up the credit tiers before saving
+      const formattedCreditTiers = formData.creditTiers.map(tier => {
+        // Ensure rates exist
+        const rates = tier.rates || {};
+        
+        // Return a cleaned tier object
+        return {
+          name: tier.name,
+          minScore: tier.minScore,
+          maxLTV: tier.maxLTV,
+          rates: {
+            '60': rates['60'] === '' ? 'N/A' : 
+                  rates['60'] === 'N/A' ? 'N/A' : 
+                  parseFloat(rates['60']),
+            '72': rates['72'] === '' ? 'N/A' : 
+                  rates['72'] === 'N/A' ? 'N/A' : 
+                  parseFloat(rates['72']),
+            '84': rates['84'] === '' ? 'N/A' : 
+                  rates['84'] === 'N/A' ? 'N/A' : 
+                  parseFloat(rates['84'])
+          }
+        };
+      });
+      
+      const lenderData = {
+        ...formData,
+        creditTiers: formattedCreditTiers
+      };
+      
       if (currentLender) {
         // Update existing lender
-        await updateLender(currentLender.id, formData);
+        await updateLender(currentLender.id, lenderData);
       } else {
         // Create new lender
-        await createLender(formData);
+        await createLender(lenderData);
       }
       
       // Refresh lenders list
@@ -559,21 +678,27 @@ function Lenders() {
                 <div className={`tab-content ${activeTab === 'creditTiers' ? 'active' : ''}`}>
                   <div className="section-header">
                     <h3>Credit Score and LTV Guidelines</h3>
-                    <p className="section-description">Define credit tiers and their corresponding LTV percentages and rates.</p>
+                    <p className="section-description">Define credit tiers with rates for different loan terms.</p>
                   </div>
                   
                   <div className="credit-tiers-table">
                     <div className="tier-header">
-                      <div className="tier-col">Tier Name</div>
+                      <div className="tier-col tier-name">Tier Name</div>
                       <div className="tier-col">Min Score</div>
                       <div className="tier-col">Max LTV%</div>
-                      <div className="tier-col">Rate %</div>
+                      <div className="tier-col rates-col">
+                        <div className="rates-header">
+                          <div>60-Month Rate</div>
+                          <div>72-Month Rate</div>
+                          <div>84-Month Rate</div>
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="tier-rows-container">
                       {formData.creditTiers.map((tier, index) => (
                         <div className="tier-row" key={index}>
-                          <div className="tier-col">
+                          <div className="tier-col tier-name">
                             <input
                               type="text"
                               value={tier.name}
@@ -597,14 +722,58 @@ function Lenders() {
                               placeholder="Max LTV%"
                             />
                           </div>
-                          <div className="tier-col">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={tier.rate}
-                              onChange={(e) => handleCreditTierChange(index, 'rate', Number(e.target.value))}
-                              placeholder="Rate %"
-                            />
+                          <div className="tier-col rates-col">
+                            {['60', '72', '84'].map((term) => (
+                              <div className="term-rate" key={term}>
+                                <div className="rate-input-group">
+                                  <input
+                                    type="text"
+                                    value={
+                                      tier.rates?.[term] === 'N/A' ? 'N/A' : 
+                                      (tier.rates?.[term] || '')
+                                    }
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      
+                                      // Handle N/A value
+                                      if (value === 'N/A') {
+                                        handleTierRateChange(index, term, 'N/A');
+                                        return;
+                                      }
+                                      
+                                      // Handle empty value
+                                      if (value === '') {
+                                        handleTierRateChange(index, term, '');
+                                        return;
+                                      }
+                                      
+                                      // Allow numbers and decimal points (periods)
+                                      // This regex checks if the value consists of digits and at most one decimal point
+                                      if (/^(\d+\.?\d*|\.\d+)$/.test(value)) {
+                                        handleTierRateChange(index, term, value);
+                                      }
+                                    }}
+                                    placeholder={`${term}mo rate`}
+                                    onClick={() => {
+                                      if (tier.rates?.[term] === 'N/A') {
+                                        handleTierRateChange(index, term, '');
+                                      }
+                                    }}
+                                  />
+                                  <span className="rate-suffix">%</span>
+                                </div>
+                                <button 
+                                  type="button"
+                                  className={`na-toggle ${tier.rates?.[term] === 'N/A' ? 'active' : ''}`}
+                                  onClick={() => {
+                                    handleTierRateChange(index, term, tier.rates?.[term] === 'N/A' ? '' : 'N/A');
+                                  }}
+                                  title={tier.rates?.[term] === 'N/A' ? 'Click to enable this rate' : 'Mark as not available'}
+                                >
+                                  N/A
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ))}

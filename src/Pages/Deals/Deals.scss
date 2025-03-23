@@ -1,4 +1,3 @@
-
 .deals-container {
   padding: 1.5rem;
   
@@ -168,6 +167,23 @@
           color: white;
         }
       }
+      
+      .reserve {
+        color: #f39c12;
+        font-weight: 500;
+      }
+      
+      .profit {
+        &.positive {
+          color: #2ecc71;
+          font-weight: bold;
+        }
+        
+        &.negative {
+          color: #e74c3c;
+          font-weight: bold;
+        }
+      }
     }
     
     @media (max-width: 1024px) {
@@ -287,5 +303,24 @@
       background-color: #fee2e2;
       color: #991b1b;
     }
+  }
+}
+
+.profit.positive {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.profit.negative {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+// Form styles for finance section
+.form-section {
+  h3 {
+    margin-top: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
   }
 }

@@ -17,62 +17,31 @@ function Deals() {
       try {
         setLoading(true);
         const dealsRef = collection(db, 'deals');
-        let q;
         
-        try {
-          // Try the complex query first
-          q = query(
-            dealsRef,
-            where('userId', '==', currentUser.uid),
-            orderBy('createdAt', 'desc')
-          );
-          
-          const querySnapshot = await getDocs(q);
-          const dealsData = [];
-          
-          querySnapshot.forEach((doc) => {
-            dealsData.push({
-              id: doc.id,
-              ...doc.data()
-            });
+        // Log the current user ID for debugging
+        console.log('Fetching deals for user ID:', currentUser.uid);
+        
+        let q = query(
+          dealsRef,
+          where('userId', '==', currentUser.uid)
+        );
+        
+        // Log the query for debugging
+        console.log('Query:', q);
+        
+        const querySnapshot = await getDocs(q);
+        console.log('Found deals:', querySnapshot.size);
+        
+        const dealsData = [];
+        querySnapshot.forEach((doc) => {
+          console.log('Deal document:', doc.id, doc.data());
+          dealsData.push({
+            id: doc.id,
+            ...doc.data()
           });
-          
-          setDeals(dealsData);
-        } catch (indexErr) {
-          // If the index error occurs, fallback to simpler query
-          if (indexErr.message && indexErr.message.includes('index')) {
-            console.warn('Index not found, using fallback query method');
-            
-            q = query(dealsRef, where('userId', '==', currentUser.uid));
-            const querySnapshot = await getDocs(q);
-            const dealsData = [];
-            
-            querySnapshot.forEach((doc) => {
-              dealsData.push({
-                id: doc.id,
-                ...doc.data()
-              });
-            });
-            
-            // Sort in JavaScript
-            dealsData.sort((a, b) => {
-              const dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000) : new Date(0);
-              const dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000) : new Date(0);
-              return dateB - dateA;
-            });
-            
-            setDeals(dealsData);
-            
-            // Display more user-friendly error about the index
-            setError(
-              'An index is being created for better performance. This may take a few minutes. ' +
-              'You can continue to use the app with limited sorting capabilities until then.'
-            );
-          } else {
-            // If it's not an index error, re-throw it
-            throw indexErr;
-          }
-        }
+        });
+        
+        setDeals(dealsData);
       } catch (err) {
         console.error('Error fetching deals:', err);
         setError('Failed to load deals. Please try again.');
@@ -132,26 +101,68 @@ function Deals() {
   };
 
   const calculateTotalProfit = (deal) => {
-    // First check if we have a precalculated total
-    if (typeof deal.totalProfit === 'number') {
-      return deal.totalProfit;
-    }
-    
-    // Otherwise calculate from products and backEndProfit
+    // Calculate product profits
     let productsProfit = 0;
     
     if (Array.isArray(deal.products)) {
       productsProfit = deal.products.reduce((sum, product) => {
         if (typeof product === 'object' && product !== null) {
-          return sum + (parseFloat(product.profit) || 0);
+          // Calculate profit from sold price and cost
+          const sold = parseFloat(product.soldPrice || product.price || 0);
+          const cost = parseFloat(product.cost || 0);
+          
+          if (sold && cost) {
+            return sum + (sold - cost);
+          }
+          
+          // Or use direct profit field if available
+          if (typeof product.profit === 'number' || (typeof product.profit === 'string' && !isNaN(parseFloat(product.profit)))) {
+            return sum + parseFloat(product.profit);
+          }
         }
         return sum;
       }, 0);
     }
     
-    const backEndProfit = parseFloat(deal.backEndProfit || deal.profit || 0);
+    // Calculate finance reserve
+    const financeReserve = calculateFinanceReserve(deal);
     
-    return productsProfit + backEndProfit;
+    // Add any additional backend profit
+    const additionalProfit = parseFloat(deal.backEndProfit || deal.profit || 0);
+    
+    // Total backend profit is products + finance reserve + additional profit
+    return productsProfit + financeReserve + additionalProfit;
+  };
+
+  const calculateFinanceReserve = (deal) => {
+    // If manual reserve is specified, use that value
+    if (deal.useManualReserve && deal.manualReserveAmount) {
+      return parseFloat(deal.manualReserveAmount);
+    }
+    
+    // Otherwise calculate based on rates and loan amount
+    const buyRate = parseFloat(deal.buyRate || 0);
+    const sellRate = parseFloat(deal.sellRate || 0);
+    const loanAmount = parseFloat(deal.loanAmount || 0);
+    const loanTerm = parseInt(deal.loanTerm || 0);
+    
+    if (loanAmount && loanTerm && sellRate >= buyRate) {
+      // Standard formula for reserve calculation
+      // This is a simplified calculation - actual formula may vary by lender
+      const rateSpread = sellRate - buyRate;
+      const reservePercentage = rateSpread * 2; // Typical 2:1 ratio for reserve percentage
+      
+      // Cap at 5% maximum reserve as this is common in the industry
+      const cappedReservePercentage = Math.min(reservePercentage, 5);
+      return (loanAmount * (cappedReservePercentage / 100));
+    }
+    
+    return 0;
+  };
+
+  const refreshDeals = () => {
+    setLoading(true);
+    fetchDeals().then(() => setLoading(false));
   };
 
   return (
@@ -172,6 +183,10 @@ function Deals() {
             <span className="material-icons">add</span>
             New Deal
           </Link>
+          <button className="btn-refresh" onClick={refreshDeals}>
+            <span className="material-icons">refresh</span>
+            Refresh
+          </button>
         </div>
       </div>
 
@@ -193,10 +208,12 @@ function Deals() {
               <tr>
                 <th>Customer</th>
                 <th>Vehicle</th>
-                <th>Date</th>
+                <th>Date Sold</th>
                 <th>Lender</th>
+                <th>Rate Spread</th>
+                <th>Reserve</th>
                 <th>Products</th>
-                <th>Profit</th>
+                <th>Total Profit</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -205,10 +222,21 @@ function Deals() {
                 <tr key={deal.id}>
                   <td>{deal.customer}</td>
                   <td>{formatVehicle(deal.vehicle)}</td>
-                  <td>{formatDate(deal.date)}</td>
-                  <td>{deal.lenderId}</td>
+                  <td>{formatDate(deal.dateSold || deal.date)}</td>
+                  <td>{deal.lenderName || deal.lenderId}</td>
+                  <td>
+                    {deal.sellRate && deal.buyRate ? 
+                      `${deal.buyRate}% → ${deal.sellRate}%` : 
+                      'N/A'
+                    }
+                  </td>
+                  <td className="reserve">
+                    ${calculateFinanceReserve(deal).toFixed(2)}
+                  </td>
                   <td>{formatProducts(deal.products)}</td>
-                  <td className="profit">${calculateTotalProfit(deal).toFixed(2)}</td>
+                  <td className={`profit ${calculateTotalProfit(deal) > 0 ? 'positive' : 'negative'}`}>
+                    ${calculateTotalProfit(deal).toFixed(2)}
+                  </td>
                   <td>
                     <Link to={`/deals/${deal.id}`} className="view-btn">
                       <span className="material-icons">visibility</span>

@@ -930,6 +930,84 @@
           }
         }
       }
+      
+      .rates-col {
+        flex: 3; // Wider column for rates
+      }
+      
+      .tier-name {
+        flex: 1.5; // Wider for tier names
+      }
+      
+      .rates-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 5px;
+        
+        div {
+          flex: 1;
+          text-align: center;
+        }
+      }
+      
+      .term-rates {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      
+      .term-rate {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        
+        .rate-input-group {
+          position: relative;
+          flex: 1;
+          
+          input {
+            width: 100%;
+            padding-right: 20px; // Space for the % symbol
+            
+            &[value="N/A"] {
+              color: #999;
+              font-style: italic;
+            }
+          }
+          
+          .rate-suffix {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            color: #666;
+          }
+        }
+        
+        .na-toggle {
+          padding: 3px 6px;
+          background-color: #f0f0f0;
+          border: 1px solid #ddd;
+          border-radius: 3px;
+          font-size: 0.7rem;
+          color: #666;
+          cursor: pointer;
+          transition: all 0.2s;
+          
+          &:hover {
+            background-color: #e0e0e0;
+          }
+          
+          &.active {
+            background-color: #e0e0e0;
+            color: #333;
+            font-weight: 500;
+          }
+        }
+      }
     }
     
     .section-divider {
