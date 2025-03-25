@@ -18,6 +18,8 @@ import LenderDetails from './Pages/LenderDetails/LenderDetails';
 import Reports from './Pages/Reports/Reports';
 import AiAssistant from './Pages/AiAssistant/AiAssistant';
 import Profile from './Pages/Profile/Profile';
+import LenderDocuments from './Pages/LenderDocuments/LenderDocuments';
+import DocumentViewer from './Pages/LenderDocuments/DocumentViewer';
 
 // Context
 import { AuthProvider } from './AuthContext';
@@ -59,6 +61,8 @@ function App() {
                 <Route path="reports" element={<Reports />} />
                 <Route path="ai-assistant" element={<AiAssistant />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="lender-documents" element={<LenderDocuments />} />
+                <Route path="lender-documents/:documentId" element={<DocumentViewer />} />
               </Route>
             </Routes>
           </Router>

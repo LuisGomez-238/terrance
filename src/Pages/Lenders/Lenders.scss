@@ -1,226 +1,339 @@
+// Kia color palette
+$primary-color: #BB162B; // Kia Red
+$primary-dark: #8E0F21; // Darker red for hover states
+$secondary-color: #000000; // Kia Black
+$dark-text: #333333; // Dark gray for text
+$light-text: #666666; // Light gray for secondary text
+$table-header: #f1f1f1; // Light gray for table headers
+$border-color: #e0e0e0; // Light gray for borders
+$input-bg: #f5f5f5; // Light gray input background
+$hover-bg: #f8f8f8; // Light gray for hover states
+$card-bg: #ffffff; // White card background
+$error-color: #ef476f; // Error color
+$success-color: #06d6a0; // Success color
+$shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
+
 .lenders-container {
-  padding: 2rem;
-  max-width: 1400px;
+  padding: 1.5rem;
+  max-width: 1200px;
   margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 60px); // Account for navbar height
+  box-sizing: border-box;
   
   .lenders-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid $border-color;
     
     h1 {
-      font-size: 2rem;
+      font-size: 1.75rem;
       font-weight: 700;
-      color: #333;
       margin: 0;
-      position: relative;
-      
-      &:after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 0;
-        width: 40px;
-        height: 3px;
-        background-color: #e51b23; // Kia red
-      }
+      color: $dark-text;
     }
     
     .actions {
       display: flex;
-      gap: 1rem;
       align-items: center;
+      gap: 1rem;
       
       .search-wrapper {
         position: relative;
+        width: 280px;
         
         .material-icons {
           position: absolute;
           left: 12px;
           top: 50%;
           transform: translateY(-50%);
-          color: #9ca3af;
-          font-size: 1.2rem;
+          color: $light-text;
+          font-size: 1.1rem;
         }
         
         input {
-          padding: 0.75rem 1rem 0.75rem 2.5rem;
-          border: 1px solid #e2e8f0;
+          width: 100%;
+          padding: 0.65rem 0.75rem 0.65rem 2.5rem;
+          border: none;
+          background-color: $input-bg;
           border-radius: 8px;
-          font-size: 0.95rem;
-          min-width: 260px;
-          background-color: #f8fafc;
-          transition: all 0.2s ease;
+          font-size: 0.9rem;
+          color: $dark-text;
+          transition: box-shadow 0.2s ease, background-color 0.2s ease;
           
           &:focus {
             outline: none;
-            border-color: #e51b23;
-            background-color: white;
-            box-shadow: 0 0 0 3px rgba(229, 27, 35, 0.1);
+            box-shadow: 0 0 0 2px rgba($primary-color, 0.15);
+            background-color: lighten($input-bg, 2%);
+          }
+          
+          &::placeholder {
+            color: $light-text;
           }
         }
       }
       
-      .btn-add {
-        display: inline-flex;
+      // Common button styles
+      .btn-add, 
+      .btn-documents,
+      .view-toggle {
+        display: flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
-        padding: 0.75rem 1.25rem;
-        background-color: #e51b23; // Kia red
-        color: white;
-        border: none;
+        padding: 0.65rem 1rem;
         border-radius: 8px;
+        font-size: 0.9rem;
         font-weight: 600;
-        font-size: 0.95rem;
+        border: none;
         cursor: pointer;
         transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(229, 27, 35, 0.2);
         
         .material-icons {
-          font-size: 1.2rem;
+          font-size: 1.1rem;
         }
+      }
+      
+      // Primary action button (add lender)
+      .btn-add {
+        background-color: $primary-color;
+        color: white;
+        text-decoration: none;
         
         &:hover {
-          background-color: #c41119;
+          background-color: $primary-dark;
           transform: translateY(-1px);
-          box-shadow: 0 4px 6px rgba(229, 27, 35, 0.25);
+          box-shadow: 0 4px 12px rgba($primary-color, 0.3);
         }
         
         &:active {
           transform: translateY(0);
-          box-shadow: 0 2px 4px rgba(229, 27, 35, 0.2);
+          box-shadow: 0 2px 6px rgba($primary-color, 0.3);
         }
       }
-    }
-    
-    @media (max-width: 768px) {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
       
-      .actions {
-        width: 100%;
-        flex-direction: column;
+      // Documents button
+      .btn-documents {
+        background-color: $secondary-color;
+        color: white;
+        text-decoration: none;
         
-        .search-wrapper {
-          width: 100%;
-          
-          input {
-            width: 100%;
-            min-width: unset;
-          }
+        &:hover {
+          background-color: lighten($secondary-color, 20%);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba($secondary-color, 0.3);
         }
         
-        .btn-add {
-          width: 100%;
-          justify-content: center;
+        &:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 6px rgba($secondary-color, 0.3);
+        }
+      }
+      
+      // View toggle button
+      .view-toggle {
+        background-color: white;
+        color: $dark-text;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        
+        &:hover {
+          background-color: #f5f5f5;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        }
+        
+        &:active {
+          transform: translateY(1px);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
       }
     }
   }
   
+  // Error message styling
   .error-message {
-    background-color: #fee2e2;
-    border-left: 4px solid #ef4444;
-    color: #b91c1c;
+    display: flex;
+    align-items: center;
     padding: 1rem;
-    border-radius: 0 8px 8px 0;
+    background-color: rgba($error-color, 0.1);
+    color: $error-color;
+    border-radius: 8px;
     margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
+    font-size: 0.9rem;
     
-    &:before {
-      content: "error";
+    &::before {
+      content: "error_outline";
       font-family: 'Material Icons';
-      margin-right: 0.75rem;
-      font-size: 1.25rem;
+      margin-right: 0.5rem;
+      font-size: 1.1rem;
     }
   }
   
-  .loading {
+  // Empty state styling
+  .empty-state {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    height: 300px;
-    font-size: 1.1rem;
-    color: #666;
-    
-    &:before {
-      content: "";
-      width: 30px;
-      height: 30px;
-      border: 3px solid #e5e7eb;
-      border-top-color: #e51b23;
-      border-radius: 50%;
-      margin-right: 0.75rem;
-      animation: spin 1s infinite linear;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  }
-  
-  .lenders-table-container {
+    justify-content: center;
     background-color: white;
     border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+    padding: 3rem 2rem;
+    box-shadow: 0 2px 10px $shadow-color;
+    text-align: center;
+    
+    .material-icons {
+      font-size: 3rem;
+      color: $light-text;
+      margin-bottom: 1rem;
+    }
+    
+    h3 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: $dark-text;
+      margin: 0 0 0.5rem;
+    }
+    
+    p {
+      color: $light-text;
+      margin: 0 0 1.5rem;
+      max-width: 300px;
+    }
+    
+    .btn-primary {
+      background-color: $primary-color;
+      color: white;
+      border: none;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: $primary-dark;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+      }
+      
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba($primary-color, 0.3);
+      }
+    }
+  }
+  
+  // Table styling
+  .lenders-table-container {
+    overflow-x: auto;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px $shadow-color;
   }
   
   .lenders-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    
+    th, td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid $border-color;
+    }
     
     th {
-      padding: 1rem 1.5rem;
-      text-align: left;
-      color: #4b5563;
+      background-color: $table-header;
       font-weight: 600;
-      background-color: #f9fafb;
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      color: $dark-text;
       position: sticky;
       top: 0;
-      z-index: 10;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    }
-    
-    td {
-      padding: 1.25rem 1.5rem;
-      color: #1f2937;
-      font-size: 0.95rem;
-      border-bottom: 1px solid #f3f4f6;
-      vertical-align: middle;
-    }
-    
-    tr:last-child td {
-      border-bottom: none;
+      z-index: 1;
+      white-space: nowrap;
+      
+      &:first-child {
+        border-top-left-radius: 12px;
+      }
+      
+      &:last-child {
+        border-top-right-radius: 12px;
+      }
     }
     
     tbody tr {
+      transition: background-color 0.2s ease;
+      
+      &:hover {
+        background-color: $hover-bg;
+      }
+      
+      &:last-child td {
+        border-bottom: none;
+        
+        &:first-child {
+          border-bottom-left-radius: 12px;
+        }
+        
+        &:last-child {
+          border-bottom-right-radius: 12px;
+        }
+      }
+    }
+    
+    .lender-name {
+      font-weight: 600;
+      color: $dark-text;
+    }
+    
+    .lender-type {
+      font-size: 0.8rem;
+      color: $light-text;
+      text-transform: capitalize;
+      margin-top: 0.25rem;
+    }
+    
+    .text-muted {
+      color: $light-text;
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+    }
+    
+    .documents-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: $dark-text;
+      background-color: $hover-bg;
+      text-decoration: none;
       transition: all 0.2s ease;
       
       &:hover {
-        background-color: #f8fafc;
+        background-color: darken($hover-bg, 5%);
+        transform: translateY(-1px);
       }
     }
     
     .actions-cell {
+      white-space: nowrap;
       display: flex;
       gap: 0.5rem;
-      justify-content: flex-end;
       
-      button {
+      .edit-btn,
+      .delete-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
         border: none;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -231,186 +344,133 @@
       }
       
       .edit-btn {
-        background-color: #f1f5f9;
-        color: #475569;
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
         
         &:hover {
-          background-color: #e2e8f0;
-          color: #334155;
+          background-color: rgba(59, 130, 246, 0.2);
+          transform: translateY(-1px);
         }
       }
       
       .delete-btn {
-        background-color: #fee2e2;
-        color: #b91c1c;
+        background-color: rgba($error-color, 0.1);
+        color: $error-color;
         
         &:hover {
-          background-color: #fecaca;
-          color: #991b1b;
+          background-color: rgba($error-color, 0.2);
+          transform: translateY(-1px);
         }
       }
     }
-    
-    @media (max-width: 1024px) {
-      display: block;
-      overflow-x: auto;
-      white-space: nowrap;
-    }
   }
   
-  // Card-based layout for mobile
-  @media (max-width: 768px) {
-    .lenders-table {
-      display: none;
-    }
+  // Card view styling
+  .lenders-card-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
     
-    .lenders-card-view {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1rem;
+    .lender-card {
+      background-color: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 10px $shadow-color;
+      display: flex;
+      flex-direction: column;
       
-      .lender-card {
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-        padding: 1.25rem;
-        transition: all 0.2s ease;
+      .lender-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: $dark-text;
+        margin-bottom: 0.25rem;
+      }
+      
+      .lender-type {
+        font-size: 0.8rem;
+        color: $light-text;
+        text-transform: capitalize;
+        margin-bottom: 1rem;
+      }
+      
+      .lender-details {
+        flex: 1;
+        margin-bottom: 1rem;
         
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        
-        .lender-name {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: #1f2937;
-          margin-bottom: 0.5rem;
-        }
-        
-        .lender-details {
-          margin-bottom: 1rem;
-          
-          .detail-item {
-            display: flex;
-            margin-bottom: 0.5rem;
-            
-            .label {
-              min-width: 110px;
-              font-size: 0.85rem;
-              font-weight: 500;
-              color: #6b7280;
-            }
-            
-            .value {
-              font-size: 0.9rem;
-              color: #374151;
-            }
-          }
-        }
-        
-        .card-actions {
+        .detail-item {
           display: flex;
-          justify-content: flex-end;
-          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
           
-          button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.5rem;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            
-            .material-icons {
-              font-size: 1.1rem;
-            }
+          .label {
+            width: 30%;
+            font-weight: 500;
+            color: $light-text;
           }
           
-          .edit-btn {
-            background-color: #f1f5f9;
-            color: #475569;
-            
-            &:hover {
-              background-color: #e2e8f0;
-              color: #334155;
-            }
-          }
-          
-          .delete-btn {
-            background-color: #fee2e2;
-            color: #b91c1c;
-            
-            &:hover {
-              background-color: #fecaca;
-              color: #991b1b;
-            }
+          .value {
+            flex: 1;
+            color: $dark-text;
+            word-break: break-word;
           }
         }
       }
-    }
-  }
-  
-  // Empty state styling
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 1rem;
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-    text-align: center;
-    
-    .material-icons {
-      font-size: 3.5rem;
-      color: #9ca3af;
-      margin-bottom: 1.5rem;
-      background-color: #f3f4f6;
-      padding: 1rem;
-      border-radius: 50%;
-    }
-    
-    h3 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #1f2937;
-      margin: 0 0 0.75rem 0;
-    }
-    
-    p {
-      color: #6b7280;
-      font-size: 1.05rem;
-      margin: 0 0 2rem 0;
-      max-width: 400px;
-    }
-    
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      background-color: #e51b23; // Kia red
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
       
-      &:before {
-        content: "add";
-        font-family: 'Material Icons';
-      }
-      
-      &:hover {
-        background-color: #c41119;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 6px rgba(229, 27, 35, 0.25);
+      .card-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid $border-color;
+        
+        .documents-btn,
+        .edit-btn,
+        .delete-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 6px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          
+          .material-icons {
+            font-size: 1.1rem;
+          }
+        }
+        
+        .documents-btn {
+          background-color: $hover-bg;
+          color: $dark-text;
+          text-decoration: none;
+          
+          &:hover {
+            background-color: darken($hover-bg, 5%);
+            transform: translateY(-1px);
+          }
+        }
+        
+        .edit-btn {
+          background-color: rgba(59, 130, 246, 0.1);
+          color: #3b82f6;
+          
+          &:hover {
+            background-color: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
+          }
+        }
+        
+        .delete-btn {
+          background-color: rgba($error-color, 0.1);
+          color: $error-color;
+          
+          &:hover {
+            background-color: rgba($error-color, 0.2);
+            transform: translateY(-1px);
+          }
+        }
       }
     }
   }
@@ -422,113 +482,12 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.5);
     display: flex;
+    align-items: center;
     justify-content: center;
-    align-items: center;
-    z-index: 1050;
-    padding: 20px;
-  }
-  
-  .modal-container {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-    width: 90%;
-    max-width: 800px;
-    max-height: 90vh;
-    overflow-y: auto;
-    z-index: 1051;
-    position: relative;
-    
-    @media (max-width: 768px) {
-      width: 95%;
-      max-height: 95vh;
-    }
-  }
-  
-  .modal-header {
-    position: sticky;
-    top: 0;
-    background: #fff;
-    z-index: 1052;
-    border-bottom: 1px solid #eee;
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    
-    h2 {
-      margin: 0;
-      font-size: 1.5rem;
-    }
-    
-    .close-button {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #666;
-      padding: 5px;
-      transition: color 0.2s;
-      
-      &:hover {
-        color: #333;
-      }
-    }
-  }
-  
-  .modal-body {
-    padding: 20px;
-    overflow-y: auto;
-  }
-  
-  .modal-footer {
-    position: sticky;
-    bottom: 0;
-    background: #fff;
-    border-top: 1px solid #eee;
-    padding: 15px 20px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    
-    button {
-      padding: 8px 16px;
-      border-radius: 4px;
-      font-weight: 500;
-      cursor: pointer;
-      
-      &.cancel-btn {
-        background-color: #f8f9fa;
-        border: 1px solid #ddd;
-        color: #333;
-        
-        &:hover {
-          background-color: #e9ecef;
-        }
-      }
-      
-      &.save-btn {
-        background-color: #007bff;
-        border: 1px solid #007bff;
-        color: white;
-        
-        &:hover {
-          background-color: #0069d9;
-        }
-        
-        &:disabled {
-          background-color: #b3d7ff;
-          border-color: #b3d7ff;
-          cursor: not-allowed;
-        }
-      }
-    }
+    z-index: 1000;
+    padding: 1rem;
   }
   
   .modal {
@@ -1100,3 +1059,4 @@
     }
   }
 }
+

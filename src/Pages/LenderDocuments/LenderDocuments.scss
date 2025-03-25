@@ -1,0 +1,194 @@
+// Kia color palette
+$primary-color: #BB162B; // Kia Red
+$primary-dark: #8E0F21; // Darker red for hover states
+$secondary-color: #000000; // Kia Black
+$dark-text: #333333; // Dark gray for text
+$light-text: #666666; // Light gray for secondary text
+$table-header: #f1f1f1; // Light gray for table headers
+$border-color: #e0e0e0; // Light gray for borders
+$input-bg: #f5f5f5; // Light gray input background
+$hover-bg: #f8f8f8; // Light gray for hover states
+$card-bg: #ffffff; // White card background
+$error-color: #ef476f; // Error color
+$success-color: #06d6a0; // Success color
+$shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
+
+.lender-documents-container {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 60px); // Account for navbar height
+  box-sizing: border-box;
+  
+  .documents-header {
+    margin-bottom: 2rem;
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      color: $dark-text;
+    }
+    
+    p {
+      color: $light-text;
+      margin: 0;
+    }
+  }
+  
+  .error-message,
+  .success-message {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    
+    &::before {
+      font-family: 'Material Icons';
+      margin-right: 0.5rem;
+      font-size: 1.1rem;
+      vertical-align: middle;
+    }
+  }
+  
+  .error-message {
+    background-color: rgba($error-color, 0.1);
+    color: $error-color;
+    
+    &::before {
+      content: "error_outline";
+    }
+  }
+  
+  .success-message {
+    background-color: rgba($success-color, 0.1);
+    color: $success-color;
+    
+    &::before {
+      content: "check_circle_outline";
+    }
+  }
+  
+  .document-upload-section {
+    background-color: $card-bg;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px $shadow-color;
+    margin-bottom: 2rem;
+    
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 1.25rem 0;
+      color: $dark-text;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid $border-color;
+    }
+    
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.25rem;
+      
+      .form-group {
+        margin-bottom: 0.5rem;
+        
+        label {
+          display: block;
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: $light-text;
+          margin-bottom: 0.35rem;
+        }
+        
+        select,
+        input[type="file"] {
+          width: 100%;
+          padding: 0.65rem 0.75rem;
+          border: 1px solid $border-color;
+          border-radius: 8px;
+          font-size: 0.95rem;
+          box-sizing: border-box;
+          background-color: $input-bg;
+          color: $dark-text;
+          transition: all 0.2s ease;
+          
+          &:focus {
+            outline: none;
+            border-color: $primary-color;
+            box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+            background-color: lighten($input-bg, 2%);
+          }
+        }
+        
+        select {
+          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+          background-position: right 0.5rem center;
+          background-repeat: no-repeat;
+          background-size: 1.5em 1.5em;
+          padding-right: 2.5rem;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+        }
+        
+        input[type="file"] {
+          padding: 0.5rem;
+          
+          &::-webkit-file-upload-button {
+            border: none;
+            background-color: $primary-color;
+            color: white;
+            border-radius: 6px;
+          }
+        }
+      }
+    }
+  }
+  
+  .documents-list-section {
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 1.25rem 0;
+      color: $dark-text;
+    }
+    
+    .documents-table-container {
+      overflow-x: auto;
+      
+      .documents-table {
+        width: 100%;
+        border-collapse: collapse;
+        
+        thead {
+          background-color: $table-header;
+          
+          th {
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: $dark-text;
+          }
+        }
+        
+        tbody {
+          tr {
+            background-color: $card-bg;
+            
+            td {
+              padding: 0.75rem;
+              text-align: left;
+              color: $dark-text;
+            }
+            
+            &:nth-child(even) {
+              background-color: $hover-bg;
+            }
+          }
+        }
+      }
+    }
+  }
+}

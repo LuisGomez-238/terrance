@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, getDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import { format, subMonths, parseISO } from 'date-fns';
 import { getAIResponse } from '../../services/openaiService';
 import './AiAssistant.scss';
 import { useProfile } from '../../contexts/ProfileContext';
+import { getDocumentTypeName } from '../../utils/documentUtils';
+import CUDLData from '../../assets/CUDLQuickRefrenceGuide.json';
 
 function AiAssistant() {
   const { currentUser } = useAuth();
@@ -32,39 +34,90 @@ function AiAssistant() {
   const [deals, setDeals] = useState([]);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
+  const [availableDocuments, setAvailableDocuments] = useState([]);
   
   useEffect(() => {
-    // Fetch real data from Firebase
+    // Fetch real data from Firebase including documents
     const fetchData = async () => {
       try {
         setError(null);
         
-        // Fetch lenders
+        // Load CUDL Quick Reference Guide
+        console.log("Loading CUDL Quick Reference Guide...");
+        
+        // Map the CUDL data to our lender format
+        const cudlLenders = [];
+        
+        // First check if CUDLData is properly loaded
+        if (CUDLData && CUDLData.credit_union_details) {
+          console.log("CUDL data loaded successfully. Processing lenders...");
+          
+          // Process each credit union from CUDL data
+          Object.entries(CUDLData.credit_union_details).forEach(([name, details]) => {
+            const formattedNotes = [
+              `Dealer Type: ${details.dealer_type || 'N/A'}`,
+              `Live/Work Counties: ${Array.isArray(details.live_work_in_county) ? details.live_work_in_county.join(', ') : 'N/A'}`,
+              `Max Adv New: ${details.max_adv_new || 'N/A'}`,
+              `Max Adv Used: ${details.max_adv_used || 'N/A'}`,
+              `Used Age Limit: ${details.used_age_limit || 'N/A'}`,
+              `Used Mileage Limit: ${details.used_mileage_limit || 'N/A'}`,
+              `Max Warranty: ${details.max_warranty || 'N/A'}`,
+              `GAP: ${details.gap || 'N/A'}`,
+              `Credit Bureau: ${details.credit_bureau || 'N/A'}`,
+              `Max Flats: ${details.max_flats || 'N/A'}`,
+              `Special Notes: ${details.notes || 'N/A'}`
+            ].join(' | ');
+            
+            cudlLenders.push({
+              id: `cudl_${name.replace(/\s+/g, '_').toLowerCase()}`,
+              name: name,
+              type: 'CUDL Credit Union',
+              notes: formattedNotes,
+              sourceType: 'CUDL Quick Reference Guide'
+            });
+          });
+          
+          console.log(`Processed ${cudlLenders.length} lenders from CUDL data`);
+        } else {
+          console.error("Failed to load CUDL data properly:", CUDLData);
+        }
+        
+        // Combine CUDL lenders with Firebase lenders, prioritizing CUDL data
         const lendersRef = collection(db, 'lenders');
         const lendersSnapshot = await getDocs(lendersRef);
-        const lendersData = [];
+        const firestoreLenders = [];
         
         lendersSnapshot.forEach(doc => {
           const data = doc.data();
-          console.log("Fetched lender data:", data.name, data);
-          lendersData.push({
-            id: doc.id,
-            name: data.name || 'Unknown',
-            type: data.type || 'Unknown',
-            notes: data.notes || '',
-            minScore: data.minScore || 0,
-            maxLtv: data.maxLtv || 0,
-            creditTiers: data.creditTiers || [],
-            vehicleRestrictions: data.vehicleRestrictions || {},
-            backendGuidelines: data.backendGuidelines || {
-              maxWarranty: 0,
-              maxGap: 0
-            },
-            tierDetails: data.tierDetails || []
-          });
+          
+          // Check if this lender already exists in CUDL data
+          const existingCudlLender = cudlLenders.find(l => 
+            l.name.toLowerCase() === (data.name || '').toLowerCase()
+          );
+          
+          if (!existingCudlLender) {
+            // Only add if not in CUDL data
+            firestoreLenders.push({
+              id: doc.id,
+              name: data.name || 'Unknown',
+              type: data.type || 'Unknown',
+              notes: data.notes || '',
+              minScore: data.minScore || 0,
+              maxLtv: data.maxLtv || 0,
+              creditTiers: data.creditTiers || [],
+              vehicleRestrictions: data.vehicleRestrictions || {},
+              backendGuidelines: data.backendGuidelines || {
+                maxWarranty: 0,
+                maxGap: 0
+              },
+              tierDetails: data.tierDetails || [],
+              sourceType: 'Firestore Database'
+            });
+          }
         });
         
-        setLenders(lendersData);
+        // Combine the lenders, with CUDL lenders first
+        setLenders([...cudlLenders, ...firestoreLenders]);
         
         // Fetch recent deals - only for current user
         try {
@@ -169,6 +222,97 @@ function AiAssistant() {
           
           setDeals(fallbackData);
         }
+        
+        // Fetch document information for each lender
+        const fetchDocumentsForLenders = async (lendersData) => {
+          console.log("Starting to fetch documents for lenders...");
+          
+          const documentsRef = collection(db, 'lenderDocuments');
+          const documentsQuery = query(
+            documentsRef,
+            where('processed', '==', true),
+            orderBy('uploadDate', 'desc')
+          );
+          
+          const documentsSnapshot = await getDocs(documentsQuery);
+          console.log(`Found ${documentsSnapshot.size} processed documents in Firestore`);
+          
+          // Group documents by lender
+          const lenderDocsMap = {};
+          
+          documentsSnapshot.forEach(doc => {
+            const data = doc.data();
+            const lenderId = data.lenderId;
+            
+            if (!lenderDocsMap[lenderId]) {
+              lenderDocsMap[lenderId] = [];
+            }
+            
+            lenderDocsMap[lenderId].push({
+              id: doc.id,
+              type: data.type,
+              fileName: data.fileName,
+              uploadDate: data.uploadDate ? new Date(data.uploadDate.seconds * 1000) : new Date(),
+              fileUrl: data.fileUrl,
+              extractedContent: data.extractedContent || null,
+              keyPoints: data.keyPoints || []
+            });
+            
+            // Debug log for each document
+            console.log(`Document for lender ${lenderId}: ${data.fileName} (${data.type})`);
+            console.log(`- Has extracted content: ${!!data.extractedContent}`);
+            console.log(`- Has key points: ${data.keyPoints?.length || 0}`);
+          });
+          
+          // Format document references for each lender
+          let documentReferences = "DOCUMENT REFERENCES:\n";
+          
+          for (const lender of lendersData) {
+            const lenderDocs = lenderDocsMap[lender.id] || [];
+            
+            if (lenderDocs.length > 0) {
+              documentReferences += `\n${lender.name}:\n`;
+              
+              // Group by document type
+              const docsByType = {};
+              lenderDocs.forEach(doc => {
+                if (!docsByType[doc.type]) {
+                  docsByType[doc.type] = [];
+                }
+                docsByType[doc.type].push(doc);
+              });
+              
+              // Add info for each document type, using the most recent version
+              for (const [type, docs] of Object.entries(docsByType)) {
+                // Sort by date (newest first) and take the first one
+                const latestDoc = docs.sort((a, b) => b.uploadDate - a.uploadDate)[0];
+                
+                // Format date
+                const uploadDate = latestDoc.uploadDate.toLocaleDateString();
+                
+                documentReferences += `- ${getDocumentTypeName(type)} (${uploadDate}):\n`;
+                
+                // Include key points if available
+                if (latestDoc.keyPoints && latestDoc.keyPoints.length > 0) {
+                  documentReferences += "  Key points:\n";
+                  latestDoc.keyPoints.forEach(point => {
+                    documentReferences += `  • ${point}\n`;
+                  });
+                }
+                
+                // Include summarized content if available
+                if (latestDoc.extractedContent) {
+                  documentReferences += "  Summary:\n";
+                  documentReferences += `  ${latestDoc.extractedContent.substring(0, 300)}...\n`;
+                }
+              }
+            }
+          }
+          
+          setAvailableDocuments(documentReferences);
+        };
+        
+        fetchDocumentsForLenders(lenders);
       } catch (error) {
         console.error('Error fetching data for AI assistant:', error);
         setError('Failed to load reference data. Please refresh the page.');
@@ -212,13 +356,12 @@ function AiAssistant() {
     setLoading(true);
     
     try {
-      // Enhanced context with user profile information
+      // Simplify the context to focus on notes
       const context = {
         lenders,
         recentDeals: deals,
         userRole: 'Finance Manager',
         dealershipName: 'Kia Dealership',
-        // Add user profile data
         userProfile: {
           name: userProfile.name || 'Finance Manager',
           monthlyTarget: userProfile.monthlyTarget || 10000,
@@ -226,7 +369,7 @@ function AiAssistant() {
         }
       };
       
-      // Call the OpenAI service with enhanced context
+      // Call the OpenAI service with simplified context
       const response = await getAIResponse(
         userMessage.content, 
         context, 

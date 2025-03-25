@@ -1,0 +1,443 @@
+// Kia color palette
+$primary-color: #BB162B; // Kia Red
+$primary-dark: #8E0F21; // Darker red for hover states
+$secondary-color: #000000; // Kia Black
+$dark-text: #333333; // Dark gray for text
+$light-text: #666666; // Light gray for secondary text
+$border-color: #e0e0e0; // Light gray for borders
+$input-bg: #f5f5f5; // Light gray input background
+$hover-bg: #f8f8f8; // Light gray for hover states
+$card-bg: #ffffff; // White card background
+$error-color: #ef476f; // Error color
+$success-color: #06d6a0; // Success color
+$shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
+
+.document-viewer {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 60px);
+  box-sizing: border-box;
+  
+  &.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.1rem;
+    color: $light-text;
+  }
+  
+  &.error {
+    text-align: center;
+    padding: 3rem;
+    
+    h2 {
+      color: $error-color;
+      margin-bottom: 1rem;
+    }
+    
+    p {
+      margin-bottom: 2rem;
+      color: $light-text;
+    }
+    
+    .btn-back {
+      display: inline-block;
+      background-color: $primary-color;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background-color: $primary-dark;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+      }
+    }
+  }
+  
+  .document-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid $border-color;
+    
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      
+      .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: $primary-color;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+        
+        span {
+          font-size: 1.1rem;
+        }
+        
+        &:hover {
+          color: $primary-dark;
+        }
+      }
+      
+      h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        color: $dark-text;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        
+        .document-type {
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: $light-text;
+          background-color: $input-bg;
+          padding: 0.25rem 0.75rem;
+          border-radius: 1rem;
+        }
+      }
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+      
+      .btn-view,
+      .btn-delete {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      
+      .btn-view {
+        background-color: $primary-color;
+        color: white;
+        text-decoration: none;
+        
+        &:hover {
+          background-color: $primary-dark;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+        }
+      }
+      
+      .btn-delete {
+        background-color: white;
+        color: $error-color;
+        border: 1px solid $error-color;
+        
+        &:hover {
+          background-color: rgba($error-color, 0.05);
+        }
+      }
+    }
+  }
+  
+  .document-details {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+    
+    .details-section,
+    .key-points-section {
+      background-color: $card-bg;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 10px $shadow-color;
+    }
+    
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 1.25rem 0;
+      color: $dark-text;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid $border-color;
+    }
+    
+    .section-description {
+      color: $light-text;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    
+    .detail-item {
+      display: flex;
+      margin-bottom: 0.75rem;
+      padding: 0.5rem 0;
+      
+      .detail-label {
+        width: 40%;
+        font-weight: 500;
+        color: $light-text;
+      }
+      
+      .detail-value {
+        flex: 1;
+        color: $dark-text;
+        
+        &.status {
+          font-weight: 500;
+          
+          &.processed {
+            color: $success-color;
+          }
+          
+          &.pending {
+            color: #f59e0b; // Amber
+          }
+        }
+      }
+    }
+    
+    .key-points-list {
+      .no-key-points {
+        padding: 2rem 0;
+        text-align: center;
+        color: $light-text;
+        font-style: italic;
+      }
+      
+      .key-point-item {
+        display: flex;
+        padding: 0.75rem;
+        border-bottom: 1px solid $border-color;
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        &:hover {
+          background-color: $hover-bg;
+        }
+        
+        .key-point-content {
+          flex: 1;
+          display: flex;
+          gap: 0.5rem;
+          color: $dark-text;
+          
+          .bullet {
+            color: $primary-color;
+            font-weight: bold;
+          }
+        }
+        
+        .key-point-actions {
+          display: flex;
+          gap: 0.5rem;
+          
+          button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0.25rem;
+            border-radius: 4px;
+            
+            span {
+              font-size: 1.1rem;
+            }
+            
+            &.btn-edit {
+              color: #3b82f6; // Blue
+              
+              &:hover {
+                background-color: rgba(59, 130, 246, 0.1);
+              }
+            }
+            
+            &.btn-delete {
+              color: $error-color;
+              
+              &:hover {
+                background-color: rgba($error-color, 0.1);
+              }
+            }
+          }
+        }
+        
+        .key-point-edit {
+          width: 100%;
+          
+          textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid $border-color;
+            border-radius: 6px;
+            resize: vertical;
+            margin-bottom: 0.5rem;
+            
+            &:focus {
+              outline: none;
+              border-color: #3b82f6;
+              box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+            }
+          }
+          
+          .edit-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            
+            button {
+              padding: 0.35rem 0.75rem;
+              border-radius: 6px;
+              font-size: 0.8rem;
+              font-weight: 500;
+              cursor: pointer;
+              transition: all 0.2s ease;
+              
+              &.btn-save {
+                background-color: #3b82f6;
+                color: white;
+                border: none;
+                
+                &:hover {
+                  background-color: #2563eb;
+                }
+              }
+              
+              &.btn-cancel {
+                background-color: white;
+                color: $light-text;
+                border: 1px solid $border-color;
+                
+                &:hover {
+                  background-color: $hover-bg;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    .add-key-point {
+      margin-top: 1rem;
+      
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        resize: vertical;
+        margin-bottom: 0.75rem;
+        background-color: $input-bg;
+        
+        &:focus {
+          outline: none;
+          border-color: $primary-color;
+          box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+        }
+        
+        &::placeholder {
+          color: $light-text;
+        }
+      }
+      
+      .btn-add {
+        background-color: $primary-color;
+        color: white;
+        border: none;
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        &:hover:not(:disabled) {
+          background-color: $primary-dark;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+        }
+        
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+  
+  .extracted-content-section {
+    background-color: $card-bg;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px $shadow-color;
+    margin-bottom: 2rem;
+    
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 1.25rem 0;
+      color: $dark-text;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid $border-color;
+    }
+    
+    .section-description {
+      color: $light-text;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    
+    .extracted-content {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 1rem;
+      background-color: $input-bg;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      color: $dark-text;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 576px) {
+  .document-viewer {
+    padding: 1rem;
+    
+    .document-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  }
+}

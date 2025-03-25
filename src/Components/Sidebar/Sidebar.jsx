@@ -13,6 +13,7 @@ function Sidebar() {
         { path: '/', label: 'Dashboard', icon: 'dashboard' },
         { path: '/deals', label: 'Deal Management', icon: 'assignment' },
         { path: '/lenders', label: 'Lender Database', icon: 'account_balance' },
+        { path: '/lender-documents', label: 'Lender Documents', icon: 'description' },
       ]
     },
     {

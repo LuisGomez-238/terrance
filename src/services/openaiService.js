@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import OpenAI from 'openai';
 
@@ -69,42 +69,34 @@ const calculatePerformanceMetrics = (deals) => {
   };
 };
 
-// Enhanced helper function to format detailed lender information with notes
+// Update the formatLenderDetails function to emphasize CUDL Reference Guide
 const formatLenderDetails = (lenders) => {
   if (!lenders || lenders.length === 0) {
     return "No lender information available.";
   }
 
-  return lenders.map(lender => {
-    // Format tier details if available
-    let tierInfo = "";
-    if (Array.isArray(lender.tierDetails) && lender.tierDetails.length > 0) {
-      tierInfo = "\n    Tiers: " + lender.tierDetails.map(tier => 
-        `${tier.name || 'Unknown'} (Score: ${tier.minScore || 'N/A'}, Rate: ${tier.baseRate || 'N/A'}%)`
-      ).join(', ');
-    } else if (lender.tiers) {
-      tierInfo = `\n    Tiers: ${lender.tiers}`;
-    }
-    
-    // Format backend guidelines
-    const backendInfo = lender.backendGuidelines ? 
-      `\n    Max Warranty: $${lender.backendGuidelines.maxWarranty || 0}, Max GAP: $${lender.backendGuidelines.maxGap || 0}` : 
-      "";
-    
-    // Include notes if available
-    const notesInfo = lender.notes ? `\n    Notes: ${lender.notes}` : "";
-    
-    // Include special programs if available
-    const programsInfo = lender.specialPrograms ? 
-      `\n    Special Programs: ${Array.isArray(lender.specialPrograms) ? 
-        lender.specialPrograms.join(', ') : 
-        lender.specialPrograms}` : 
-      "";
-    
-    return `- ${lender.name} (${lender.type || 'Standard'}):
-    Min Credit Score: ${lender.minScore || 'N/A'}
-    Max LTV: ${lender.maxLtv || 'N/A'}${tierInfo}${backendInfo}${notesInfo}${programsInfo}`;
+  // First, add the CUDL general reference information with more emphasis
+  let formattedInfo = `CUDL QUICK REFERENCE GUIDE INFORMATION:
+- This information is from the CUDL Quick Reference List dated 03/21/2025
+- ALWAYS REFER TO THIS INFORMATION FIRST when answering lender questions
+- Lender notes in this guide represent the most current and accurate information
+- Credit unions serving ALL California counties include: American First CU, CoastHills CU, First Tech FCU, Golden 1 CU, KeyPoint CU, Kinecta FCU, LBS Financial, Matadors Community FCU, Nuvision CU, Patelco CU, Premier America CU, RIZE CU, San Diego County CU, Sea Air CU, Sea West FCU, Self-Help CU, Technology CU, UNCLE CU, Valley Strong CU
+- Remember that new member eligibility is subject to review by each credit union
+- This reference guide is not an official credit union document - always verify with current rate sheets
+
+`;
+
+  // Then format each lender's specific information with emphasis on the notes
+  formattedInfo += lenders.map(lender => {
+    return `
+LENDER: ${lender.name.toUpperCase()} (${lender.type || 'Standard'})
+----------------------------------------
+PRIMARY REFERENCE NOTES: ${lender.notes || 'No detailed notes available for this lender.'}
+----------------------------------------
+`;
   }).join('\n\n');
+  
+  return formattedInfo;
 };
 
 // Enhanced helper function to find lender usage statistics
@@ -255,32 +247,166 @@ const formatInterestRateData = (lenders) => {
   return formattedData;
 };
 
+// New helper function to fetch document references for each lender
+const getLenderDocuments = async (lenders) => {
+  if (!lenders || lenders.length === 0) return {};
+  
+  const lenderDocs = {};
+  
+  try {
+    // Get all processed lender documents
+    const docsRef = collection(db, 'lenderDocuments');
+    const docsQuery = query(
+      docsRef,
+      where('processed', '==', true),
+      orderBy('uploadDate', 'desc')
+    );
+    
+    const docsSnapshot = await getDocs(docsQuery);
+    
+    // Group documents by lender ID
+    docsSnapshot.forEach(doc => {
+      const data = doc.data();
+      
+      if (!lenderDocs[data.lenderId]) {
+        lenderDocs[data.lenderId] = [];
+      }
+      
+      lenderDocs[data.lenderId].push({
+        type: data.type,
+        fileName: data.fileName,
+        url: data.fileUrl,
+        uploadDate: data.uploadDate ? new Date(data.uploadDate.seconds * 1000).toDateString() : 'Unknown'
+      });
+    });
+    
+    return lenderDocs;
+  } catch (error) {
+    console.error('Error fetching lender documents:', error);
+    return {};
+  }
+};
+
+// Add function to format document information for the AI context
+const formatDocumentReferences = async (lenders) => {
+  if (!lenders || lenders.length === 0) return "";
+  
+  try {
+    // Get all processed lender documents
+    const docsRef = collection(db, 'lenderDocuments');
+    const docsQuery = query(
+      docsRef,
+      where('processed', '==', true),
+      orderBy('uploadDate', 'desc')
+    );
+    
+    const docsSnapshot = await getDocs(docsQuery);
+    
+    // Group documents by lender
+    const lenderDocsMap = {};
+    
+    docsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const lenderId = data.lenderId;
+      
+      if (!lenderDocsMap[lenderId]) {
+        lenderDocsMap[lenderId] = [];
+      }
+      
+      lenderDocsMap[lenderId].push({
+        id: doc.id,
+        type: data.type,
+        fileName: data.fileName,
+        uploadDate: data.uploadDate ? new Date(data.uploadDate.seconds * 1000) : new Date(),
+        fileUrl: data.fileUrl,
+        extractedContent: data.extractedContent || null,
+        keyPoints: data.keyPoints || []
+      });
+    });
+    
+    // Format document references for each lender
+    let documentReferences = "DOCUMENT REFERENCES:\n";
+    
+    for (const lender of lenders) {
+      const lenderDocs = lenderDocsMap[lender.id] || [];
+      
+      if (lenderDocs.length > 0) {
+        documentReferences += `\n${lender.name}:\n`;
+        
+        // Group by document type
+        const docsByType = {};
+        lenderDocs.forEach(doc => {
+          if (!docsByType[doc.type]) {
+            docsByType[doc.type] = [];
+          }
+          docsByType[doc.type].push(doc);
+        });
+        
+        // Add info for each document type, using the most recent version
+        for (const [type, docs] of Object.entries(docsByType)) {
+          // Sort by date (newest first) and take the first one
+          const latestDoc = docs.sort((a, b) => b.uploadDate - a.uploadDate)[0];
+          
+          // Format date
+          const uploadDate = latestDoc.uploadDate.toLocaleDateString();
+          
+          documentReferences += `- ${getDocumentTypeName(type)} (${uploadDate}):\n`;
+          
+          // Include key points if available
+          if (latestDoc.keyPoints && latestDoc.keyPoints.length > 0) {
+            documentReferences += "  Key points:\n";
+            latestDoc.keyPoints.forEach(point => {
+              documentReferences += `  • ${point}\n`;
+            });
+          }
+          
+          // Include summarized content if available
+          if (latestDoc.extractedContent) {
+            documentReferences += "  Summary:\n";
+            documentReferences += `  ${latestDoc.extractedContent}\n`;
+          }
+        }
+      }
+    }
+    
+    return documentReferences;
+  } catch (error) {
+    console.error('Error formatting document references:', error);
+    return "Error retrieving document references.";
+  }
+};
+
+// Helper function to get human-readable document type name
+function getDocumentTypeName(type) {
+  const types = {
+    'guidelines': 'Lending Guidelines',
+    'ratesheet': 'Rate Sheet',
+    'forms': 'Application Forms',
+    'reference': 'Quick Reference'
+  };
+  
+  return types[type] || type;
+}
+
 // Main function to get response from OpenAI
 export const getAIResponse = async (question, context, userId) => {
   try {
-    // Extract all context data
+    // Extract context data
     const userProfile = context.userProfile || {};
-    const lenders = context.lenders || [];
     const deals = context.recentDeals || [];
     
-    // Calculate performance metrics
+    // Get performance metrics
     const performance = calculatePerformanceMetrics(deals);
     
-    // Get lender usage statistics with enhanced format
-    const lenderUsageStats = getLenderUsageStats(deals, lenders);
-    
-    // Format detailed lender information
-    const detailedLenderInfo = formatLenderDetails(lenders);
-    
-    // Format interest rate data
-    const interestRateData = formatInterestRateData(lenders);
+    // Include document references if available
+    const documentReferences = context.availableDocuments || "";
     
     // Calculate goal progress percentage
     const monthlyTarget = userProfile.monthlyTarget || 10000;
     const goalProgress = Math.round((performance.totalProfit / monthlyTarget) * 100);
     const remainingToGoal = Math.max(0, monthlyTarget - performance.totalProfit);
     
-    // Update the system message with comprehensive context
+    // Update the systemMessage in getAIResponse function
     const systemMessage = `You are Terrance, an experienced automotive Finance Director with 20+ years in the industry. 
 You're direct, knowledgeable and don't waste time with pleasantries. 
 You respond in short, concise sentences focusing on actionable advice about automotive finance, insurance products, and sales techniques.
@@ -301,14 +427,7 @@ CURRENT PERFORMANCE:
 - Top selling products: ${performance.topProducts}
 
 LENDER INFORMATION:
-We have ${lenders.length} lenders available. Here are the top lenders by usage:
-${lenderUsageStats}
-
-DETAILED LENDER GUIDELINES:
-${detailedLenderInfo}
-
-INTEREST RATE INFORMATION:
-${interestRateData}
+${formatLenderDetails(context.lenders || [])}
 
 DEAL HISTORY:
 - Total deals in system: ${deals.length}
@@ -316,19 +435,16 @@ DEAL HISTORY:
   `${d.vehicle.year || ''} ${d.vehicle.model || 'Unknown'} ($${d.deal?.backEndProfit?.toFixed(2) || '0.00'})`
 ).join('; ')}
 
-When asked about interest rates for specific credit scores or terms:
-1. ONLY provide rate information that is explicitly available in the INTEREST RATE INFORMATION section.
-2. If exact rate information for a specific lender, credit score, or term is not available in your data, say "I don't have that specific rate information in my system" rather than estimating.
-3. If a specific credit score falls between tier thresholds, explain which tier it would be in.
-4. Always specify the exact data source, e.g., "According to our system, Noble Credit Union's rate for a 710 score (Tier 2) at 72 months is 5.99%."
-5. If the requested lender doesn't appear in your data at all, state this clearly.
+CRUCIAL INSTRUCTIONS FOR HANDLING LENDER INFORMATION:
+1. Your PRIMARY source of truth for all lender information is the CUDL Quick Reference Guide - ALWAYS check this source first
+2. ONLY use information that explicitly appears in the CUDL Quick Reference Guide when discussing lender guidelines, rates, programs or requirements
+3. When referencing lender information, EXPLICITLY cite the CUDL Quick Reference Guide, e.g., "According to the CUDL Quick Reference Guide..."
+4. If information being requested isn't in the CUDL Quick Reference Guide, clearly state: "That specific information isn't available in the CUDL Quick Reference Guide for [Lender Name]. I recommend checking their current rate sheet."
+5. NEVER make up, guess, or infer information that isn't explicitly stated in the CUDL Quick Reference Guide
+6. When multiple lenders could satisfy a customer's needs, prioritize recommendations based on notes in the CUDL Quick Reference Guide
+7. Pay particular attention to the lender notes section which contains the most valuable insights
 
-When asked about specific lenders, provide detailed guidelines on their credit requirements, backend limits, and product approvals. 
-Reference the specific notes attached to each lender - these contain important internal knowledge about approval trends and relationship tips.
-When making recommendations, prioritize lenders with higher average profit based on the user's deal history.
-You can only access this specific user's deals and should reference their personal performance data.
-Focus on their goal progress, top products, and preferred lenders when giving advice.
-Keep responses brief and direct - like an experienced F&I director who's busy but willing to help with specific questions.`;
+Keep responses direct and actionable, like an experienced finance director who references accurate lender information.`;
 
     // Log system message for debugging (remove in production)
     console.log("System message:", systemMessage);
@@ -364,3 +480,25 @@ Keep responses brief and direct - like an experienced F&I director who's busy bu
     throw new Error('Failed to get AI response: ' + (error.message || 'Unknown error'));
   }
 };
+
+// Add a more comprehensive lender question preprocessor
+function preprocessLenderQuestion(question, lenders) {
+  const lenderKeywords = ['rate', 'guideline', 'program', 'tier', 'credit score', 'eligibility', 'lender', 'finance', 'credit union', 'bank', 'approval', 'ltv', 'advance', 'mileage', 'year', 'used', 'new', 'max loan', 'term', 'warranty', 'gap', 'backend', 'flat'];
+  
+  // Check if question is about lenders
+  const isLenderQuestion = lenderKeywords.some(keyword => 
+    question.toLowerCase().includes(keyword)
+  );
+  
+  if (isLenderQuestion) {
+    return `IMPORTANT: This question appears to be about lender information. Before answering, you MUST:
+1. Review the CUDL Quick Reference Guide information FIRST
+2. Only provide information explicitly stated in the CUDL Quick Reference Guide
+3. Begin your response with "Based on the CUDL Quick Reference Guide..."
+4. If the requested information isn't in the CUDL Quick Reference Guide, clearly state this
+
+The question is: ${question}`;
+  }
+  
+  return question;
+}
