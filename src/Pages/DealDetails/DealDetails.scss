@@ -223,6 +223,47 @@ $shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
             border-radius: 8px;
           }
         }
+        /* Add to your DealDetails.scss */
+.finance-reserve-section {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+}
+
+.calculated-reserve {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+}
+
+.reserve-info {
+  margin-top: 5px;
+  color: #6c757d;
+}
+
+.manual-reserve-toggle {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.manual-reserve-toggle input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+.field-help {
+  margin-top: 5px;
+  color: #6c757d;
+}
+
+.manual-indicator {
+  font-size: 0.8em;
+  color: #6c757d;
+  font-style: italic;
+  margin-left: 5px;
+}
       }
       
       .products-list {
@@ -578,6 +619,54 @@ $shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
       .details-section {
         padding: 1.25rem;
       }
+    }
+  }
+}
+
+/* Add to DealDetails.scss */
+.product-table {
+  width: 100%;
+  margin-bottom: 20px;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    th {
+      font-weight: 600;
+      background-color: #f5f5f5;
+    }
+    
+    tr.selected-product {
+      background-color: #f8f9fa;
+    }
+    
+    .profit-column {
+      font-weight: 500;
+      color: #28a745;
+    }
+    
+    tfoot tr {
+      background-color: #f5f5f5;
+      font-weight: 600;
+    }
+    
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
     }
   }
 }

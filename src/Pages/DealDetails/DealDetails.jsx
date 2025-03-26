@@ -24,7 +24,14 @@ function DealDetails() {
     { id: 'paintProtection', name: 'Paint Protection' },
     { id: 'tireWheel', name: 'Tire & Wheel Protection' },
     { id: 'keyReplacement', name: 'Key Replacement' },
-    { id: 'maintenance', name: 'Maintenance Plan' }
+    { id: 'maintenance', name: 'Maintenance Plan' },
+    { id: 'theftCode', name: 'Theft Code' },
+    { id: 'vsc', name: 'VSC (Vehicle Service Contract)' },
+    { id: 'finishingTouch', name: 'Finishing Touch' },
+    { id: 'karrSecurity', name: 'KARR Security' },
+    { id: 'karrGuard', name: 'KARR Guard' },
+    { id: 'swat', name: 'S.W.A.T' },
+    { id: 'lifetimeBattery', name: 'Lifetime Battery' }
   ];
   
   const [formData, setFormData] = useState({
@@ -41,7 +48,9 @@ function DealDetails() {
     apr: '',
     term: '',
     productData: {},
-    notes: ''
+    notes: '',
+    useManualReserve: false,
+    manualReserveAmount: ''
   });
   
   useEffect(() => {
@@ -90,8 +99,10 @@ function DealDetails() {
             sellRate: dealData.sellRate || 0,
             apr: dealData.apr || 0,
             term: dealData.term || 0,
-            backEndProfit: dealData.profit || 0,
-            loanAmount: dealData.loanAmount || 0
+            loanAmount: dealData.loanAmount || 0,
+            productsProfit: dealData.productsProfit || 0,
+            financeReserve: dealData.financeReserve || 0,
+            totalProfit: dealData.totalProfit || (dealData.productsProfit || 0) + (dealData.financeReserve || 0)
           },
           products: Array.isArray(dealData.products) ? 
             dealData.products.map(p => {
@@ -104,26 +115,42 @@ function DealDetails() {
           date: dealData.date || new Date(),
           userId: dealData.userId,
           createdAt: dealData.createdAt,
-          updatedAt: dealData.updatedAt
+          updatedAt: dealData.updatedAt,
+          useManualReserve: dealData.useManualReserve || false,
+          manualReserveAmount: dealData.manualReserveAmount || 0
         };
         
         setDeal(formattedDeal);
         
-        const productsObj = {
-          warranty: { selected: false, price: '' },
-          gap: { selected: false, price: '' },
-          paintProtection: { selected: false, price: '' },
-          tireWheel: { selected: false, price: '' },
-          keyReplacement: { selected: false, price: '' },
-          maintenance: { selected: false, price: '' }
-        };
+        const productsObj = {};
+        availableProducts.forEach(product => {
+          productsObj[product.id] = { 
+            selected: false, 
+            price: '', 
+            cost: '' 
+          };
+        });
         
         formattedDeal.products.forEach(product => {
-          if (product && product.type) {
-            productsObj[product.type] = {
+          if (product && product.id) {
+            productsObj[product.id] = {
               selected: true,
-              price: (product.price || 0).toString()
+              price: (product.soldPrice || product.price || 0).toString(),
+              cost: (product.cost || 0).toString()
             };
+          } else if (product && product.type) {
+            const matchingProduct = availableProducts.find(p => 
+              p.id.toLowerCase() === product.type.toLowerCase() ||
+              p.name.toLowerCase().includes(product.type.toLowerCase())
+            );
+            
+            if (matchingProduct) {
+              productsObj[matchingProduct.id] = {
+                selected: true,
+                price: (product.soldPrice || product.price || 0).toString(),
+                cost: (product.cost || 0).toString()
+              };
+            }
           }
         });
         
@@ -141,7 +168,9 @@ function DealDetails() {
           apr: formattedDeal.deal.apr.toString(),
           term: formattedDeal.deal.term.toString(),
           productData: productsObj,
-          notes: formattedDeal.notes
+          notes: formattedDeal.notes,
+          useManualReserve: dealData.useManualReserve || false,
+          manualReserveAmount: dealData.manualReserveAmount?.toString() || ''
         });
         
         setDataLoaded(true);
@@ -156,7 +185,28 @@ function DealDetails() {
     fetchData();
   }, [dealId, currentUser]);
   
-  const calculateFinanceReserve = (deal) => {
+  const calculateFinanceReserve = (deal, useFormValues = false) => {
+    if (useFormValues) {
+      if (formData.useManualReserve && formData.manualReserveAmount) {
+        return parseFloat(formData.manualReserveAmount) || 0;
+      }
+      
+      const buyRate = parseFloat(formData.buyRate) || 0;
+      const sellRate = parseFloat(formData.sellRate) || 0;
+      const loanAmount = parseFloat(formData.loanAmount) || 0;
+      const loanTerm = parseInt(formData.term) || 0;
+      
+      if (loanAmount && loanTerm && sellRate >= buyRate) {
+        const rateSpread = sellRate - buyRate;
+        const reservePercentage = rateSpread * 2;
+        
+        const cappedReservePercentage = Math.min(reservePercentage, 5);
+        return (loanAmount * (cappedReservePercentage / 100));
+      }
+      
+      return 0;
+    }
+    
     if (typeof deal === 'object' && deal !== null) {
       if (deal.useManualReserve && deal.manualReserveAmount) {
         return parseFloat(deal.manualReserveAmount);
@@ -180,21 +230,15 @@ function DealDetails() {
   };
 
   const calculateTotalProfit = (deal) => {
+    if (!deal) return 0;
+    
     let productsProfit = 0;
     
-    if (deal && deal.products && Array.isArray(deal.products)) {
+    if (deal.products && Array.isArray(deal.products)) {
       productsProfit = deal.products.reduce((sum, product) => {
         if (typeof product === 'object' && product !== null) {
-          const sold = parseFloat(product.soldPrice || product.price || 0);
-          const cost = parseFloat(product.cost || 0);
-          
-          if (sold && cost) {
-            return sum + (sold - cost);
-          }
-          
-          if (typeof product.profit === 'number' || (typeof product.profit === 'string' && !isNaN(parseFloat(product.profit)))) {
-            return sum + parseFloat(product.profit);
-          }
+          const profit = parseFloat(product.profit || 0);
+          return sum + profit;
         }
         return sum;
       }, 0);
@@ -202,11 +246,13 @@ function DealDetails() {
     
     const financeReserve = calculateFinanceReserve(deal);
     
-    const additionalProfit = parseFloat(
-      (deal.backEndProfit || deal.profit || (deal.deal && deal.deal.backEndProfit) || 0)
-    );
+    console.log('Profit calculation:', {
+      productsProfit,
+      financeReserve,
+      total: productsProfit + financeReserve
+    });
     
-    return productsProfit + financeReserve + additionalProfit;
+    return productsProfit + financeReserve;
   };
   
   const handleInputChange = (e) => {
@@ -253,19 +299,25 @@ function DealDetails() {
       const selectedProducts = Object.entries(formData.productData)
         .filter(([_, product]) => product.selected)
         .map(([key, product]) => {
+          const productInfo = availableProducts.find(p => p.id === key);
           const soldPrice = parseFloat(product.price) || 0;
           const cost = parseFloat(product.cost) || 0;
+          const profit = soldPrice - cost;
           
           return {
             id: key,
-            name: availableProducts.find(p => p.id === key)?.name || key,
+            name: productInfo?.name || key,
             soldPrice: soldPrice,
             cost: cost,
-            profit: soldPrice - cost
+            profit: profit
           };
         });
       
-      const totalProfit = calculateTotalProductsProfit();
+      const productsProfit = calculateTotalProductsProfit();
+      
+      const financeReserve = calculateFinanceReserve(null, true);
+      
+      const totalProfit = productsProfit + financeReserve;
       
       const updateData = {
         customer: formData.customerName,
@@ -282,9 +334,14 @@ function DealDetails() {
         sellRate: parseFloat(formData.sellRate) || 0,
         apr: parseFloat(formData.apr) || 0,
         term: parseInt(formData.term) || 0,
+        productsProfit: productsProfit,
+        financeReserve: financeReserve,
+        totalProfit: totalProfit,
         profit: totalProfit,
         products: selectedProducts,
         notes: formData.notes,
+        useManualReserve: formData.useManualReserve,
+        manualReserveAmount: formData.useManualReserve ? parseFloat(formData.manualReserveAmount) || 0 : null,
         updatedAt: serverTimestamp()
       };
       
@@ -309,10 +366,15 @@ function DealDetails() {
           sellRate: formData.sellRate,
           apr: formData.apr,
           term: formData.term,
-          backEndProfit: totalProfit
+          loanAmount: parseFloat(formData.loanAmount) || 0,
+          productsProfit: productsProfit,
+          financeReserve: financeReserve,
+          totalProfit: totalProfit
         },
         products: selectedProducts,
         notes: formData.notes,
+        useManualReserve: formData.useManualReserve,
+        manualReserveAmount: formData.useManualReserve ? parseFloat(formData.manualReserveAmount) || 0 : null,
         updatedAt: new Date()
       };
       
@@ -568,49 +630,114 @@ function DealDetails() {
                 />
               </div>
               <div className="form-group calculated-profit">
-                <label>Backend Profit (calculated)</label>
+                <label>Products Profit</label>
                 <div className="profit-display">${calculateTotalProductsProfit().toFixed(2)}</div>
+              </div>
+              <div className="form-group calculated-reserve">
+                <label>Finance Reserve (calculated)</label>
+                <div className="profit-display">
+                  ${calculateFinanceReserve(null, true).toFixed(2)}
+                </div>
+              </div>
+              <div className="form-group calculated-total">
+                <label>Total Profit (calculated)</label>
+                <div className="profit-display">
+                  ${(calculateTotalProductsProfit() + calculateFinanceReserve(null, true)).toFixed(2)}
+                </div>
               </div>
             </div>
             
             <div className="form-section">
               <h2>Products Sold</h2>
-              <div className="products-list">
-                {Object.entries(formData.productData).map(([key, product]) => (
-                  <div className="product-item" key={key}>
-                    <input
-                      type="checkbox"
-                      id={key}
-                      checked={product.selected}
-                      onChange={(e) => handleProductDataChange(key, 'selected', e.target.checked)}
-                    />
-                    <label htmlFor={key}>
-                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                    </label>
-                    <div className="product-price-group">
-                      <input
-                        type="number"
-                        placeholder="Price $"
-                        value={product.price}
-                        onChange={(e) => handleProductDataChange(key, 'price', e.target.value)}
-                        disabled={!product.selected}
-                        className="product-price"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Cost $"
-                        value={product.cost}
-                        onChange={(e) => handleProductDataChange(key, 'cost', e.target.value)}
-                        disabled={!product.selected}
-                        className="product-cost"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="products-total">
-                Total Products: ${calculateTotalProductsProfit().toFixed(2)}
+              <div className="product-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>Product</th>
+                      <th>Sold Price ($)</th>
+                      <th>Cost ($)</th>
+                      <th>Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {availableProducts.map(product => (
+                      <tr key={product.id} className={formData.productData[product.id]?.selected ? "selected-product" : ""}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            id={`select-${product.id}`}
+                            checked={formData.productData[product.id]?.selected || false}
+                            onChange={(e) => handleProductDataChange(product.id, 'selected', e.target.checked)}
+                          />
+                        </td>
+                        <td>
+                          <label htmlFor={`select-${product.id}`}>{product.name}</label>
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            id={`price-${product.id}`}
+                            value={formData.productData[product.id]?.price || ''}
+                            onChange={(e) => handleProductDataChange(product.id, 'price', e.target.value)}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            disabled={!formData.productData[product.id]?.selected}
+                            className="product-price"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            id={`cost-${product.id}`}
+                            value={formData.productData[product.id]?.cost || ''}
+                            onChange={(e) => handleProductDataChange(product.id, 'cost', e.target.value)}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            disabled={!formData.productData[product.id]?.selected}
+                            className="product-cost"
+                          />
+                        </td>
+                        <td className="profit-column">
+                          ${formData.productData[product.id]?.selected ? 
+                            ((parseFloat(formData.productData[product.id]?.price || 0) - 
+                              parseFloat(formData.productData[product.id]?.cost || 0)).toFixed(2)) : 
+                            '0.00'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="2"><strong>Totals</strong></td>
+                      <td>
+                        <strong>
+                          ${Object.entries(formData.productData).reduce((sum, [_, product]) => {
+                            if (product.selected) {
+                              return sum + (parseFloat(product.price) || 0);
+                            }
+                            return sum;
+                          }, 0).toFixed(2)}
+                        </strong>
+                      </td>
+                      <td>
+                        <strong>
+                          ${Object.entries(formData.productData).reduce((sum, [_, product]) => {
+                            if (product.selected) {
+                              return sum + (parseFloat(product.cost) || 0);
+                            }
+                            return sum;
+                          }, 0).toFixed(2)}
+                        </strong>
+                      </td>
+                      <td>
+                        <strong>${calculateTotalProductsProfit().toFixed(2)}</strong>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </div>
           </div>
@@ -623,6 +750,60 @@ function DealDetails() {
               onChange={handleInputChange}
               rows={4}
             ></textarea>
+          </div>
+          
+          <div className="form-section finance-reserve-section">
+            <h3>Finance Reserve</h3>
+            
+            <div className="calculated-reserve">
+              <strong>Calculated Reserve:</strong> 
+              ${calculateFinanceReserve(null, true).toFixed(2)}
+              <div className="reserve-info">
+                <small>
+                  Based on ${formData.loanAmount || 0} loan amount with 
+                  {parseFloat(formData.sellRate || 0) - parseFloat(formData.buyRate || 0)}% rate spread
+                </small>
+              </div>
+            </div>
+            
+            <div className="manual-reserve-toggle">
+              <input
+                type="checkbox"
+                id="useManualReserve"
+                checked={formData.useManualReserve}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  useManualReserve: e.target.checked
+                }))}
+              />
+              <label htmlFor="useManualReserve">Use Manual Reserve Amount</label>
+            </div>
+            
+            {formData.useManualReserve && (
+              <div className="form-group">
+                <label htmlFor="manualReserveAmount">Manual Reserve Amount ($)</label>
+                <input
+                  id="manualReserveAmount"
+                  name="manualReserveAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.manualReserveAmount}
+                  onChange={handleInputChange}
+                  placeholder="Enter reserve amount"
+                />
+                <div className="field-help">
+                  <small>This will override the calculated reserve amount</small>
+                </div>
+              </div>
+            )}
+            
+            <div className="form-group calculated-total">
+              <label>Total Profit (including reserve)</label>
+              <div className="profit-display">
+                ${(calculateTotalProductsProfit() + calculateFinanceReserve(null, true)).toFixed(2)}
+              </div>
+            </div>
           </div>
         </form>
       ) : (
@@ -680,7 +861,7 @@ function DealDetails() {
               </div>
               <div className="detail-item">
                 <span className="detail-label">Back-end Profit:</span>
-                <span className="detail-value">${deal.deal.backEndProfit}</span>
+                <span className="detail-value">${deal.deal.productsProfit}</span>
               </div>
             </div>
             
@@ -781,15 +962,18 @@ function DealDetails() {
             <h3>Profit Breakdown</h3>
             <div className="breakdown-item">
               <span className="label">Product Profit:</span>
-              <span className="value">${calculateTotalProductsProfit().toFixed(2)}</span>
+              <span className="value">
+                ${deal.products && Array.isArray(deal.products) 
+                  ? deal.products.reduce((sum, p) => sum + (typeof p === 'object' ? (parseFloat(p.profit || 0)) : 0), 0).toFixed(2)
+                  : '0.00'}
+              </span>
             </div>
             <div className="breakdown-item">
               <span className="label">Finance Reserve:</span>
-              <span className="value">${calculateFinanceReserve(deal).toFixed(2)}</span>
-            </div>
-            <div className="breakdown-item">
-              <span className="label">Additional Profit:</span>
-              <span className="value">${parseFloat(deal.deal.backEndProfit || deal.deal.profit || 0).toFixed(2)}</span>
+              <span className="value">
+                ${calculateFinanceReserve(deal).toFixed(2)}
+                {deal.useManualReserve && <span className="manual-indicator"> (Manual)</span>}
+              </span>
             </div>
             <div className="breakdown-item total">
               <span className="label">Total Profit:</span>
