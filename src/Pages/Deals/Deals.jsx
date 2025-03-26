@@ -15,7 +15,10 @@ function Deals() {
   const [dataLoaded, setDataLoaded] = useState(false);
 
   const fetchDeals = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      console.log('No current user found, aborting fetch');
+      return;
+    }
 
     try {
       showLoading("Loading your deals...");
@@ -30,33 +33,36 @@ function Deals() {
         where('userId', '==', currentUser.uid)
       );
       
-      console.log('Query:', q);
-      
       const querySnapshot = await getDocs(q);
-      console.log('Found deals:', querySnapshot.size);
+      console.log('Found deals for current user:', querySnapshot.size);
       
       const dealsData = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        console.log('Deal document:', doc.id, data);
-      
-        const dealData = {
-          id: doc.id,
-          customer: typeof data.customer === 'object' ? data.customer.name : data.customer,
-          vehicle: data.vehicle || {},
-          dateSold: data.dateSold || data.date || data.createdAt,
-          lenderName: data.lenderName || (data.lender && typeof data.lender === 'object' ? data.lender.name : data.lender) || 'N/A',
-          buyRate: data.buyRate || 0,
-          sellRate: data.sellRate || 0,
-          loanAmount: data.loanAmount || 0,
-          loanTerm: data.loanTerm || 0,
-          products: Array.isArray(data.products) ? data.products : [],
-          backEndProfit: data.backEndProfit || data.profit || 0,
-          ...data
-        };
-      
-        dealsData.push(dealData);
+        
+        if (data.userId === currentUser.uid) {
+          const dealData = {
+            id: doc.id,
+            customer: typeof data.customer === 'object' ? data.customer.name : data.customer,
+            vehicle: data.vehicle || {},
+            dateSold: data.dateSold || data.date || data.createdAt,
+            lenderName: data.lenderName || (data.lender && typeof data.lender === 'object' ? data.lender.name : data.lender) || 'N/A',
+            buyRate: data.buyRate || 0,
+            sellRate: data.sellRate || 0,
+            loanAmount: data.loanAmount || 0,
+            loanTerm: data.loanTerm || 0,
+            products: Array.isArray(data.products) ? data.products : [],
+            backEndProfit: data.backEndProfit || data.profit || 0,
+            ...data
+          };
+          
+          dealsData.push(dealData);
+        } else {
+          console.warn('Skipping deal with mismatched userId:', data.userId, 'Current user:', currentUser.uid);
+        }
       });
+      
+      console.log('Final filtered deals count:', dealsData.length);
       
       setDeals(dealsData);
       setError(null);
@@ -64,10 +70,11 @@ function Deals() {
     } catch (err) {
       console.error('Error fetching deals:', err);
       setError('Failed to load deals. Please try again.');
+      setDeals([]);
     } finally {
       hideLoading();
     }
-  }, [currentUser]);
+  }, [currentUser, showLoading, hideLoading]);
 
   useEffect(() => {
     fetchDeals();
@@ -215,9 +222,14 @@ function Deals() {
         <div className="empty-state">
           <span className="material-icons">description</span>
           <h3>No deals found</h3>
-          <p>{deals.length > 0 ? 'No deals match your search criteria' : 'Start by creating your first deal'}</p>
+          <p>
+            {searchTerm ? 
+              'No deals match your search criteria' : 
+              'You haven\'t created any deals yet. Start by creating your first deal.'
+            }
+          </p>
           <Link to="/deals/new" className="btn-primary">Create Deal</Link>
-          {deals.length > 0 && searchTerm && (
+          {searchTerm && (
             <button onClick={() => setSearchTerm('')} className="btn-secondary">
               Clear Search
             </button>

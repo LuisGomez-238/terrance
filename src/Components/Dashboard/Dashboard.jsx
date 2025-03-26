@@ -112,6 +112,9 @@ function Dashboard() {
     
     console.log("Generating profit trend with goal:", goalValue);
     
+    // If there are no deals, still create the chart data with zero profits
+    const hasDeals = allDeals.length > 0;
+    
     // Create data for the past 6 months
     for (let i = 5; i >= 0; i--) {
       const month = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
@@ -120,62 +123,63 @@ function Dashboard() {
       const monthStart = new Date(year, month.getMonth(), 1);
       const monthEnd = new Date(year, month.getMonth() + 1, 0, 23, 59, 59);
       
-      // Filter deals for this month
-      const monthDeals = allDeals.filter(deal => {
-        let dealDate;
-        try {
-          if (deal.date) {
-            if (deal.date.toDate) {
-              dealDate = deal.date.toDate();
-            } else if (deal.date.seconds) {
-              dealDate = new Date(deal.date.seconds * 1000);
-            } else if (deal.date instanceof Date) {
-              dealDate = deal.date;
-            } else if (typeof deal.date === 'string') {
-              dealDate = new Date(deal.date);
-            } else {
-              return false;
+      // If no deals, set totalProfit to 0
+      let totalProfit = 0;
+      
+      if (hasDeals) {
+        // Filter deals for this month
+        const monthDeals = allDeals.filter(deal => {
+          let dealDate;
+          try {
+            if (deal.date) {
+              if (deal.date.toDate) {
+                dealDate = deal.date.toDate();
+              } else if (deal.date.seconds) {
+                dealDate = new Date(deal.date.seconds * 1000);
+              } else if (deal.date instanceof Date) {
+                dealDate = deal.date;
+              } else if (typeof deal.date === 'string') {
+                dealDate = new Date(deal.date);
+              } else {
+                return false;
+              }
+              
+              return dealDate >= monthStart && dealDate <= monthEnd;
+            } else if (deal.createdAt) {
+              // Fallback to createdAt if date is not available
+              if (deal.createdAt.toDate) {
+                dealDate = deal.createdAt.toDate();
+              } else if (deal.createdAt.seconds) {
+                dealDate = new Date(deal.createdAt.seconds * 1000);
+              } else if (deal.createdAt instanceof Date) {
+                dealDate = deal.createdAt;
+              } else if (typeof deal.createdAt === 'string') {
+                dealDate = new Date(deal.createdAt);
+              } else {
+                return false;
+              }
+              
+              return dealDate >= monthStart && dealDate <= monthEnd;
             }
-            
-            return dealDate >= monthStart && dealDate <= monthEnd;
-          } else if (deal.createdAt) {
-            // Fallback to createdAt if date is not available
-            if (deal.createdAt.toDate) {
-              dealDate = deal.createdAt.toDate();
-            } else if (deal.createdAt.seconds) {
-              dealDate = new Date(deal.createdAt.seconds * 1000);
-            } else if (deal.createdAt instanceof Date) {
-              dealDate = deal.createdAt;
-            } else if (typeof deal.createdAt === 'string') {
-              dealDate = new Date(deal.createdAt);
-            } else {
-              return false;
-            }
-            
-            return dealDate >= monthStart && dealDate <= monthEnd;
+            return false;
+          } catch (e) {
+            console.error("Error filtering deal by date for chart:", e, deal);
+            return false;
           }
-          return false;
-        } catch (e) {
-          console.error("Error filtering deal by date for chart:", e, deal);
-          return false;
-        }
-      });
-      
-      // Calculate total profit for the month - check multiple possible profit fields
-      const totalProfit = monthDeals.reduce((sum, deal) => {
-        // Try different potential profit field names
-        const profit = 
-          parseFloat(deal.profit) || 
-          parseFloat(deal.backEndProfit) || 
-          parseFloat(deal.totalProfit) || 
-          parseFloat(deal.backend) || 
-          0;
+        });
         
-        console.log(`Deal ID: ${deal.id}, Profit: ${profit}, Raw profit value:`, deal.profit);
-        return sum + profit;
-      }, 0);
-      
-      console.log(`Month: ${monthName} ${year}, Deals: ${monthDeals.length}, Profit: ${totalProfit}`);
+        // Calculate total profit for the month - check multiple possible profit fields
+        totalProfit = monthDeals.reduce((sum, deal) => {
+          const profit = 
+            parseFloat(deal.profit) || 
+            parseFloat(deal.backEndProfit) || 
+            parseFloat(deal.totalProfit) || 
+            parseFloat(deal.backend) || 
+            0;
+          
+          return sum + profit;
+        }, 0);
+      }
       
       // Add to trend data with the provided goal
       trendData.push({
@@ -290,8 +294,6 @@ function Dashboard() {
       // First fetch the monthly target to ensure we have the latest
       await fetchUserMonthlyTarget();
       
-      // Then proceed with the rest of your existing code
-      
       // Get user deals
       const dealsRef = collection(db, 'deals');
       const userDealsQuery = query(
@@ -299,86 +301,64 @@ function Dashboard() {
         where('userId', '==', currentUser.uid)
       );
       
+      console.log('Fetching dashboard data for user ID:', currentUser.uid);
+      
       const userDealsSnapshot = await getDocs(userDealsQuery);
       const userDeals = [];
       
       userDealsSnapshot.forEach(doc => {
         const dealData = doc.data();
         
-        // Normalize profit value from various possible fields
-        const profit = 
-          parseFloat(dealData.profit) || 
-          parseFloat(dealData.backEndProfit) || 
-          parseFloat(dealData.totalProfit) || 
-          parseFloat(dealData.backend) || 
-          0;
-        
-        userDeals.push({ 
-          id: doc.id, 
-          ...dealData,
-          // Ensure profit is always a number and properly formatted 
-          profit: profit
-        });
+        // Only include deals that actually belong to this user
+        if (dealData.userId === currentUser.uid) {
+          // Normalize profit value from various possible fields
+          const profit = 
+            parseFloat(dealData.profit) || 
+            parseFloat(dealData.backEndProfit) || 
+            parseFloat(dealData.totalProfit) || 
+            parseFloat(dealData.backend) || 
+            0;
+          
+          userDeals.push({ 
+            id: doc.id, 
+            ...dealData,
+            // Ensure profit is always a number and properly formatted 
+            profit: profit
+          });
+        } else {
+          console.warn('Found deal with mismatched userId:', dealData.userId, 'Current user:', currentUser.uid);
+        }
       });
       
       console.log("User deals loaded:", userDeals.length);
-      console.log("Sample deal data:", userDeals.length > 0 ? userDeals[0] : "No deals");
       
+      // Remove the sample deal code - we don't want to show fake data
+      // Instead, just show empty state if there are no deals
       if (userDeals.length === 0) {
-        // Create a sample deal for testing (remove in production)
-        const currentDate = new Date();
-        const sampleDeal = {
-          id: "sample-deal",
-          customer: "Test Customer",
-          vehicle: "2023 Test Model",
-          date: Timestamp.fromDate(currentDate),
-          profit: 1500,
-          products: ["GAP Insurance", "Extended Warranty"],
-          userId: currentUser.uid
-        };
+        console.log("No deals found for this user");
         
-        userDeals.push(sampleDeal);
-        console.log("Added sample deal for testing:", sampleDeal);
-        
-        // Show debug info to help troubleshoot
-        setDebugInfo({
-          userId: currentUser.uid,
-          message: "No deals found for this user. Added sample deal for testing."
+        // Set empty data states instead of fake data
+        setStats({
+          totalDeals: 0,
+          avgProfit: 0,
+          productsPerDeal: 0,
+          goalProgress: 0
         });
         
-        // Try a query without the userId filter just to verify if any deals exist
-        const allDealsQuery = query(dealsRef, limit(5));
-        const allDealsSnapshot = await getDocs(allDealsQuery);
-        const sampleDeals = [];
-        allDealsSnapshot.forEach(doc => {
-          const data = doc.data();
-          sampleDeals.push({ 
-            id: doc.id, 
-            ...data,
-            profitValue: 
-              parseFloat(data.profit) || 
-              parseFloat(data.backEndProfit) || 
-              parseFloat(data.totalProfit) || 
-              parseFloat(data.backend) || 0
-          });
-        });
+        setRecentDeals([]);
+        setMonthlyProfitData([]);
+        setProductDistribution([]);
         
-        if (sampleDeals.length > 0) {
-          console.log("Sample deals from the database:", sampleDeals);
-          setDebugInfo(prev => ({
-            ...prev,
-            totalDealsInFirestore: sampleDeals.length,
-            sampleDeal: sampleDeals[0],
-            sampleUserIds: sampleDeals.map(d => d.userId),
-            profitFields: sampleDeals.map(d => ({
-              profit: d.profit,
-              backEndProfit: d.backEndProfit,
-              totalProfit: d.totalProfit,
-              backend: d.backend,
-              calculatedValue: d.profitValue
-            }))
-          }));
+        // Set initialLoadComplete to true even if no deals
+        if (!initialLoadComplete) {
+          setInitialLoadComplete(true);
         }
+        
+        // Hide loading and finish early
+        hideLoading();
+        setLoading(false);
+        setLastRefresh(new Date());
+        return;
       }
       
       // Process all user deals
@@ -712,7 +692,7 @@ function Dashboard() {
             Monthly Profit Trend
           </h2>
           <div className="chart-container">
-            {monthlyProfitData.length > 0 ? (
+            {stats.totalDeals > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart
                   data={monthlyProfitData}
@@ -751,7 +731,8 @@ function Dashboard() {
             ) : (
               <div className="no-data-message">
                 <span className="material-icons">info</span>
-                <p>No profit data available</p>
+                <p>No deals found for this period. Create your first deal to see profit trends.</p>
+                <Link to="/deals/new" className="create-deal-btn">Create New Deal</Link>
               </div>
             )}
           </div>
@@ -773,7 +754,7 @@ function Dashboard() {
             Product Distribution
           </h2>
           <div className="chart-container">
-            {productDistribution.length > 0 ? (
+            {stats.totalDeals > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -797,7 +778,8 @@ function Dashboard() {
             ) : (
               <div className="no-data-message">
                 <span className="material-icons">info</span>
-                <p>No product data available</p>
+                <p>No deals found. Add some deals with products to see distribution.</p>
+                <Link to="/deals/new" className="create-deal-btn">Create New Deal</Link>
               </div>
             )}
           </div>
