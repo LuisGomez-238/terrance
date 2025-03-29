@@ -380,6 +380,8 @@ function DealDetails() {
       
       setDeal(updatedFormattedDeal);
       setEditMode(false);
+      
+      navigate(`/deals?edited=${dealId}&t=${Date.now()}`);
     } catch (error) {
       console.error('Error updating deal:', error);
       setError('Failed to update deal. Please try again.');
@@ -432,7 +434,16 @@ function DealDetails() {
     <div className="deal-details-container">
       <div className="deal-details-header">
         <div className="header-left">
-          <Link to="/deals" className="back-link">← Back to Deals</Link>
+          {editMode ? (
+            <Link to="/deals" className="back-link">← Back to Deals</Link>
+          ) : (
+            <Link to={deal.updatedAt && deal.updatedAt instanceof Date && Date.now() - deal.updatedAt.getTime() < 60000 
+              ? `/deals?edited=${dealId}&t=${Date.now()}`
+              : "/deals"} 
+              className="back-link">
+              ← Back to Deals
+            </Link>
+          )}
           <h1>{editMode ? 'Edit Deal' : `Deal: ${deal.customer.name}`}</h1>
         </div>
         <div className="header-actions">

@@ -26,6 +26,7 @@ function Reports() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [monthlyGoal, setMonthlyGoal] = useState(userProfile.monthlyTarget || 10000);
   const [dataLoaded, setDataLoaded] = useState(false); // Track data loaded state
+  const [productPenetrationData, setProductPenetrationData] = useState([]);
   
   // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A4DE6C', '#8884D8', '#FF6B6B'];
@@ -79,72 +80,117 @@ function Reports() {
         const months = parseInt(timeRange);
         const today = new Date();
         
-        // Fetch all deals within the time range
-        const startDate = startOfMonth(subMonths(today, months - 1));
-        
+        // Fetch all deals for the current user
         const dealsRef = collection(db, 'deals');
-        let dealsQuery;
-        
-        try {
-          // Try to query with both where and orderBy (requires an index)
-          dealsQuery = query(
-            dealsRef,
-            where('userId', '==', currentUser.uid),
-            where('createdAt', '>=', startDate),
-            orderBy('createdAt', 'desc')
-          );
-        } catch (e) {
-          // Fallback if index doesn't exist
-          console.log("Using fallback query without ordering due to:", e);
-          dealsQuery = query(
-            dealsRef,
-            where('userId', '==', currentUser.uid),
-            where('createdAt', '>=', startDate)
-          );
-        }
+        let dealsQuery = query(
+          dealsRef,
+          where('userId', '==', currentUser.uid)
+        );
         
         const dealsSnapshot = await getDocs(dealsQuery);
-        const deals = [];
+        let deals = [];
         
         console.log('Fetched deals:', dealsSnapshot.size);
+        
         dealsSnapshot.forEach(doc => {
           const dealData = doc.data();
           
-          // Skip deals without required data
-          if (!dealData.createdAt || !dealData.products) {
-            console.warn(`Deal ${doc.id} missing required data, skipping...`);
+          // Process the date (try all possible date fields)
+          let dealDate;
+          if (dealData.dateSold) {
+            dealDate = dealData.dateSold.toDate ? dealData.dateSold.toDate() : new Date(dealData.dateSold);
+          } else if (dealData.date) {
+            dealDate = dealData.date.toDate ? dealData.date.toDate() : new Date(dealData.date);
+          } else if (dealData.createdAt) {
+            dealDate = dealData.createdAt.toDate ? dealData.createdAt.toDate() : new Date(dealData.createdAt);
+          } else {
+            // If no date field, use current date
+            dealDate = new Date();
+          }
+          
+          // Skip deals that are outside our time range
+          const startDate = startOfMonth(subMonths(today, months - 1));
+          if (dealDate < startDate) {
             return;
           }
           
-          // Convert Firestore timestamp to Date
-          const createdAt = dealData.createdAt.toDate ? 
-            dealData.createdAt.toDate() : 
-            (typeof dealData.createdAt === 'string' ? parseISO(dealData.createdAt) : new Date(dealData.createdAt));
-          
-          // Calculate deal profit from products
-          let dealProfit = 0;
+          // Calculate total profit from all sources
+          // 1. Product profit
+          let productProfit = 0;
+          let productList = [];
           let productCount = 0;
           
           if (Array.isArray(dealData.products)) {
             productCount = dealData.products.length;
             dealData.products.forEach(product => {
-              if (product.profit && !isNaN(product.profit)) {
-                dealProfit += parseFloat(product.profit);
+              if (typeof product === 'object') {
+                const profit = parseFloat(product.profit || 0);
+                productProfit += profit;
+                
+                // Keep track of product names for distribution analysis
+                if (product.name) {
+                  productList.push(product.name);
+                } else if (product.id) {
+                  // Try to find a product name from the ID
+                  const productName = product.id.replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, str => str.toUpperCase());
+                  productList.push(productName);
+                }
+              } else if (typeof product === 'string') {
+                // Legacy format where products are just strings
+                productList.push(product);
               }
             });
           }
           
+          // 2. Finance reserve
+          let financeReserve = 0;
+          if (dealData.financeReserve) {
+            // If finance reserve is explicitly stored
+            financeReserve = parseFloat(dealData.financeReserve || 0);
+          } else if (dealData.useManualReserve && dealData.manualReserveAmount) {
+            // If manual reserve is used
+            financeReserve = parseFloat(dealData.manualReserveAmount || 0);
+          } else if (dealData.sellRate && dealData.buyRate && dealData.loanAmount) {
+            // Calculate finance reserve
+            const buyRate = parseFloat(dealData.buyRate || 0);
+            const sellRate = parseFloat(dealData.sellRate || 0);
+            const loanAmount = parseFloat(dealData.loanAmount || 0);
+            const loanTerm = parseInt(dealData.term || dealData.loanTerm || 0);
+            
+            if (loanAmount && loanTerm && sellRate >= buyRate) {
+              const rateSpread = sellRate - buyRate;
+              const reservePercentage = rateSpread * 2;
+              const cappedReservePercentage = Math.min(reservePercentage, 5);
+              financeReserve = (loanAmount * (cappedReservePercentage / 100));
+            }
+          }
+          
+          // Calculate total profit (products + finance reserve)
+          const totalProfit = productProfit + financeReserve;
+          
+          // Get lender information
+          const lenderName = dealData.lenderName || 
+                             (dealData.lender && typeof dealData.lender === 'object' ? 
+                               dealData.lender.name : dealData.lender) || 
+                             'Unknown';
+          
           deals.push({
             id: doc.id,
-            createdAt,
-            profit: dealProfit,
-            products: dealData.products || [],
-            productCount,
-            lender: dealData.lender || 'Unknown',
-            customer: dealData.customer || { name: 'Unknown' },
+            date: dealDate,
+            profit: totalProfit,
+            productProfit: productProfit,
+            financeReserve: financeReserve,
+            products: productList,
+            productCount: productCount,
+            lender: lenderName,
+            customer: typeof dealData.customer === 'object' ? 
+                      dealData.customer.name : dealData.customer,
             vehicle: dealData.vehicle || { model: 'Unknown' }
           });
         });
+        
+        console.log('Processed deals:', deals.length);
         
         // Process the data for monthly report
         const monthlyProfitData = [];
@@ -161,18 +207,18 @@ function Reports() {
           
           // Filter deals for this month
           const monthDeals = deals.filter(deal => 
-            isWithinInterval(deal.createdAt, { start: monthStart, end: monthEnd })
+            isWithinInterval(deal.date, { start: monthStart, end: monthEnd })
           );
           
-          const backEndProfit = monthDeals.reduce((sum, deal) => sum + deal.profit, 0);
-          const avgProfit = monthDeals.length > 0 ? backEndProfit / monthDeals.length : 0;
+          const totalProfit = monthDeals.reduce((sum, deal) => sum + deal.profit, 0);
+          const avgProfit = monthDeals.length > 0 ? totalProfit / monthDeals.length : 0;
           const totalProducts = monthDeals.reduce((sum, deal) => sum + deal.productCount, 0);
           const productsPerDeal = monthDeals.length > 0 ? totalProducts / monthDeals.length : 0;
           
           monthlyProfitData.push({
             month: monthName,
             deals: monthDeals.length,
-            backEndProfit,
+            backEndProfit: totalProfit,
             avgProfit,
             productsPerDeal,
             goal: monthlyGoal
@@ -182,9 +228,7 @@ function Reports() {
           monthDeals.forEach(deal => {
             if (Array.isArray(deal.products)) {
               deal.products.forEach(product => {
-                if (product.name) {
-                  productCounts[product.name] = (productCounts[product.name] || 0) + 1;
-                }
+                productCounts[product] = (productCounts[product] || 0) + 1;
               });
             }
             
@@ -210,9 +254,27 @@ function Reports() {
           avgProfit: lenderProfits[name] / lenderCounts[name]
         })).sort((a, b) => b.deals - a.deals);
         
+        // Calculate product penetration (what percentage of all deals have each product)
+        const totalDeals = deals.length;
+        const productPenetration = Object.keys(productCounts).map(name => {
+          const count = productCounts[name];
+          const penetrationRate = totalDeals > 0 ? (count / totalDeals) * 100 : 0;
+          
+          return {
+            name,
+            value: penetrationRate, // Percentage of deals that have this product
+            count // Actual count for the tooltip
+          };
+        }).sort((a, b) => b.value - a.value);
+        
+        console.log('Monthly data:', monthlyProfitData);
+        console.log('Product data entries:', productChartData.length);
+        console.log('Lender data entries:', lenderChartData.length);
+        
         setMonthlyData(monthlyProfitData);
         setProductData(productChartData);
         setLenderData(lenderChartData);
+        setProductPenetrationData(productPenetration);
         setDataLoaded(true);
       } catch (error) {
         console.error('Error fetching report data:', error);
@@ -237,10 +299,10 @@ function Reports() {
         csvContent += `${month.month},${month.deals},$${month.backEndProfit.toFixed(2)},$${month.avgProfit.toFixed(2)},${month.productsPerDeal.toFixed(2)},${month.goal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n`;
       });
     } else if (reportType === 'products') {
-      csvContent = "Product,Count\n";
+      csvContent = "Product,Count,Penetration Rate (%)\n";
       
-      productData.forEach(product => {
-        csvContent += `${product.name},${product.value}\n`;
+      productPenetrationData.forEach(product => {
+        csvContent += `${product.name},${product.count},${product.value.toFixed(1)}\n`;
       });
     } else if (reportType === 'lenders') {
       csvContent = "Lender,Deals,Total Profit,Average Profit\n";
@@ -424,18 +486,18 @@ function Reports() {
             <h2>Product Distribution Analysis</h2>
             {productData.length > 0 ? (
               <>
-                <div className="chart-container">
+                <div className="chart-container pie-chart-container">
                   <h3>Product Distribution</h3>
                   <div className="chart-wrapper">
-                    <ResponsiveContainer width="100%" height={400}>
-                      <PieChart>
+                    <ResponsiveContainer width="100%" height={350}>
+                      <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                         <Pie
                           data={productData}
                           cx="50%"
                           cy="50%"
                           labelLine={true}
                           label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={150}
+                          outerRadius={120}
                           fill="#8884d8"
                           dataKey="value"
                         >
@@ -445,6 +507,43 @@ function Reports() {
                         </Pie>
                         <Tooltip formatter={(value, name, props) => [`${value} sales`, props.payload.name]} />
                       </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                <div className="chart-container">
+                  <h3>Product Penetration Rate</h3>
+                  <p className="chart-description">
+                    Percentage of deals that include each product
+                  </p>
+                  <div className="chart-wrapper">
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart 
+                        data={productPenetrationData} 
+                        margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
+                        layout="vertical"
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+                        <YAxis type="category" dataKey="name" width={150} />
+                        <Tooltip 
+                          formatter={(value, name, props) => [
+                            `${value.toFixed(1)}% (${props.payload.count} deals)`, 
+                            'Penetration Rate'
+                          ]} 
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="value" 
+                          name="Penetration Rate" 
+                          fill="#8884d8"
+                          label={{ 
+                            position: 'right', 
+                            formatter: (value) => `${value.toFixed(1)}%`,
+                            fill: '#666'
+                          }}
+                        />
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
@@ -472,6 +571,28 @@ function Reports() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="data-table">
+                  <h3>Product Penetration</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Number of Deals</th>
+                        <th>Penetration Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {productPenetrationData.map((product, index) => (
+                        <tr key={index}>
+                          <td>{product.name}</td>
+                          <td>{product.count}</td>
+                          <td>{product.value.toFixed(1)}%</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
