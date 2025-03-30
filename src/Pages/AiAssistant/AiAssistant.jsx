@@ -42,18 +42,58 @@ function AiAssistant() {
       try {
         setError(null);
         
-        // Load CUDL Quick Reference Guide
-        console.log("Loading CUDL Quick Reference Guide...");
+        // First, load lenders from Firestore (will be prioritized)
+        console.log("Loading lenders from Firestore...");
+        const lendersRef = collection(db, 'lenders');
+        const lendersSnapshot = await getDocs(lendersRef);
+        const firestoreLenders = [];
         
-        // Map the CUDL data to our lender format
+        console.log(`Found ${lendersSnapshot.size} lenders in Firestore`);
+        
+        lendersSnapshot.forEach(doc => {
+          const data = doc.data();
+          console.log(`Firestore lender: ${data.name}, has notes: ${!!data.notes}`);
+          
+          // Add all Firestore lenders with their complete data
+          firestoreLenders.push({
+            id: doc.id,
+            name: data.name || 'Unknown',
+            type: data.type || 'Unknown',
+            notes: data.notes || '',
+            minScore: data.minScore || 0,
+            maxLtv: data.maxLtv || 0,
+            creditTiers: data.creditTiers || [],
+            vehicleRestrictions: data.vehicleRestrictions || {},
+            backendGuidelines: data.backendGuidelines || {
+              maxWarranty: 0,
+              maxGap: 0
+            },
+            tierDetails: data.tierDetails || [],
+            sourceType: 'Firestore Database'
+          });
+        });
+        
+        // Then load CUDL Quick Reference Guide as supplementary data
+        console.log("Loading CUDL Quick Reference Guide as supplementary data...");
         const cudlLenders = [];
         
-        // First check if CUDLData is properly loaded
         if (CUDLData && CUDLData.credit_union_details) {
           console.log("CUDL data loaded successfully. Processing lenders...");
           
           // Process each credit union from CUDL data
           Object.entries(CUDLData.credit_union_details).forEach(([name, details]) => {
+            // Check if this lender already exists in Firestore data
+            const existingFirestoreLender = firestoreLenders.find(l => 
+              l.name.toLowerCase() === name.toLowerCase()
+            );
+            
+            // If it exists in Firestore, skip it as we already have the prioritized version
+            if (existingFirestoreLender) {
+              console.log(`Lender ${name} exists in Firestore - using Firestore version`);
+              return;
+            }
+            
+            // Format CUDL data for lenders not in Firestore
             const formattedNotes = [
               `Dealer Type: ${details.dealer_type || 'N/A'}`,
               `Live/Work Counties: ${Array.isArray(details.live_work_in_county) ? details.live_work_in_county.join(', ') : 'N/A'}`,
@@ -82,42 +122,10 @@ function AiAssistant() {
           console.error("Failed to load CUDL data properly:", CUDLData);
         }
         
-        // Combine CUDL lenders with Firebase lenders, prioritizing CUDL data
-        const lendersRef = collection(db, 'lenders');
-        const lendersSnapshot = await getDocs(lendersRef);
-        const firestoreLenders = [];
-        
-        lendersSnapshot.forEach(doc => {
-          const data = doc.data();
-          
-          // Check if this lender already exists in CUDL data
-          const existingCudlLender = cudlLenders.find(l => 
-            l.name.toLowerCase() === (data.name || '').toLowerCase()
-          );
-          
-          if (!existingCudlLender) {
-            // Only add if not in CUDL data
-            firestoreLenders.push({
-              id: doc.id,
-              name: data.name || 'Unknown',
-              type: data.type || 'Unknown',
-              notes: data.notes || '',
-              minScore: data.minScore || 0,
-              maxLtv: data.maxLtv || 0,
-              creditTiers: data.creditTiers || [],
-              vehicleRestrictions: data.vehicleRestrictions || {},
-              backendGuidelines: data.backendGuidelines || {
-                maxWarranty: 0,
-                maxGap: 0
-              },
-              tierDetails: data.tierDetails || [],
-              sourceType: 'Firestore Database'
-            });
-          }
-        });
-        
-        // Combine the lenders, with CUDL lenders first
-        setLenders([...cudlLenders, ...firestoreLenders]);
+        // Combine the lenders with Firestore lenders FIRST (priority)
+        const combinedLenders = [...firestoreLenders, ...cudlLenders];
+        console.log(`Setting ${combinedLenders.length} total lenders (${firestoreLenders.length} Firestore priority, ${cudlLenders.length} CUDL supplementary)`);
+        setLenders(combinedLenders);
         
         // Fetch recent deals - only for current user
         try {

@@ -69,34 +69,75 @@ const calculatePerformanceMetrics = (deals) => {
   };
 };
 
-// Update the formatLenderDetails function to emphasize CUDL Reference Guide
+// Update the formatLenderDetails function to highlight rate information in lender notes
 const formatLenderDetails = (lenders) => {
   if (!lenders || lenders.length === 0) {
     return "No lender information available.";
   }
 
-  // First, add the CUDL general reference information with more emphasis
-  let formattedInfo = `CUDL QUICK REFERENCE GUIDE INFORMATION:
-- This information is from the CUDL Quick Reference List dated 03/21/2025
-- ALWAYS REFER TO THIS INFORMATION FIRST when answering lender questions
-- Lender notes in this guide represent the most current and accurate information
+  // First, add the general reference information with source priority clarified
+  let formattedInfo = `LENDER DATA SOURCES:
+- PRIORITY 1: Firestore lender data - ALWAYS use this when available
+- PRIORITY 2: CUDL Quick Reference Guide - only use for lenders not in Firestore
+- All lender information is organized with the highest priority data first
 - Credit unions serving ALL California counties include: American First CU, CoastHills CU, First Tech FCU, Golden 1 CU, KeyPoint CU, Kinecta FCU, LBS Financial, Matadors Community FCU, Nuvision CU, Patelco CU, Premier America CU, RIZE CU, San Diego County CU, Sea Air CU, Sea West FCU, Self-Help CU, Technology CU, UNCLE CU, Valley Strong CU
 - Remember that new member eligibility is subject to review by each credit union
-- This reference guide is not an official credit union document - always verify with current rate sheets
 
 `;
 
-  // Then format each lender's specific information with emphasis on the notes
-  formattedInfo += lenders.map(lender => {
+  // Group lenders by source type for clarity
+  const firestoreLenders = lenders.filter(l => l.sourceType === 'Firestore Database');
+  const cudlLenders = lenders.filter(l => l.sourceType === 'CUDL Quick Reference Guide');
+  
+  // Add a note about prioritization
+  formattedInfo += `PRIORITIZED LENDER DATA:\n`;
+  formattedInfo += `- Firestore Database Lenders (Priority 1): ${firestoreLenders.length}\n`;
+  formattedInfo += `- CUDL Quick Reference Guide Lenders (Priority 2): ${cudlLenders.length}\n\n`;
+  
+  // Format the lender details, starting with Firestore lenders
+  const allLenderDetails = [...firestoreLenders, ...cudlLenders].map(lender => {
+    // Extract notes and create a structured format with key details highlighted
+    const notes = lender.notes || 'No detailed notes available for this lender.';
+    const source = lender.sourceType || 'Unknown Source';
+    
+    // Create a section specifically for the most important guidelines extracted from notes
+    let keyGuidelines = "";
+    if (notes.includes('|')) {
+      // Break down pipe-separated notes into bullet points for clarity
+      keyGuidelines = notes.split('|').map(item => item.trim()).filter(item => item).map(item => `  • ${item}`).join('\n');
+    }
+    
+    // Extract and highlight any rate-related information in the notes
+    let rateInfo = "";
+    const rateKeywords = ['rate', 'apr', 'interest', '%', 'percent', 'tier', 'score', 'fico'];
+    
+    if (notes) {
+      const notesLower = notes.toLowerCase();
+      const hasRateInfo = rateKeywords.some(keyword => notesLower.includes(keyword));
+      
+      if (hasRateInfo) {
+        rateInfo = "\nRATE-SPECIFIC INFORMATION (EXTRACTED FROM NOTES):\n";
+        notes.split('|').forEach(part => {
+          if (rateKeywords.some(keyword => part.toLowerCase().includes(keyword))) {
+            rateInfo += `  • ${part.trim()}\n`;
+          }
+        });
+      }
+    }
+    
     return `
 LENDER: ${lender.name.toUpperCase()} (${lender.type || 'Standard'})
 ----------------------------------------
-PRIMARY REFERENCE NOTES: ${lender.notes || 'No detailed notes available for this lender.'}
+SOURCE: ${source}
+!!! CRITICAL LENDER NOTES !!!
+${notes}
+${keyGuidelines ? '\nKEY GUIDELINES BREAKDOWN:\n' + keyGuidelines : ''}
+${rateInfo}
 ----------------------------------------
 `;
   }).join('\n\n');
   
-  return formattedInfo;
+  return formattedInfo + allLenderDetails;
 };
 
 // Enhanced helper function to find lender usage statistics
@@ -394,6 +435,20 @@ export const getAIResponse = async (question, context, userId) => {
     // Extract context data
     const userProfile = context.userProfile || {};
     const deals = context.recentDeals || [];
+    const lenders = context.lenders || [];
+    
+    // Add debugging for lender data
+    console.log(`Processing question with ${lenders.length} lenders available`);
+    if (lenders.length > 0) {
+      console.log("Sample lender data:", lenders[0].name, "has notes:", !!lenders[0].notes);
+    }
+    
+    // Check if the question might contain a lender name not in our list
+    const possibleLenderWords = question.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+    console.log("Possible lender words in question:", possibleLenderWords);
+    
+    // Preprocess the question to detect lender inquiries
+    const processedQuestion = preprocessLenderQuestion(question, lenders);
     
     // Get performance metrics
     const performance = calculatePerformanceMetrics(deals);
@@ -406,7 +461,7 @@ export const getAIResponse = async (question, context, userId) => {
     const goalProgress = Math.round((performance.totalProfit / monthlyTarget) * 100);
     const remainingToGoal = Math.max(0, monthlyTarget - performance.totalProfit);
     
-    // Update the systemMessage in getAIResponse function
+    // Keep and update THIS system message inside the function
     const systemMessage = `You are Terrance, an experienced automotive Finance Director with 20+ years in the industry. 
 You're direct, knowledgeable and don't waste time with pleasantries. 
 You respond in short, concise sentences focusing on actionable advice about automotive finance, insurance products, and sales techniques.
@@ -426,23 +481,28 @@ CURRENT PERFORMANCE:
 - Goal progress: ${goalProgress}% ($${remainingToGoal.toLocaleString()} remaining)
 - Top selling products: ${performance.topProducts}
 
+CRUCIAL INSTRUCTIONS FOR LENDER INFORMATION:
+1. ALWAYS PRIORITIZE FIRESTORE LENDER DATA over CUDL Quick Reference Guide data
+2. For lenders with data in Firestore, use ONLY that data and ignore CUDL Quick Reference Guide
+3. Use CUDL Quick Reference Guide ONLY for lenders not found in Firestore
+4. Always START your response with the specific lender information, NOT with reference to the source
+5. Example: "For Golden 1 CU: They require membership through live/work counties, offer 115% Max Adv New..." 
+6. NEVER introduce responses with phrases like "Based on Firestore" or "According to the CUDL Guide"
+
+SPECIAL HANDLING FOR RATE QUESTIONS:
+1. If Firestore data contains SPECIFIC RATE PERCENTAGES, provide those rates directly and DO NOT add any disclaimers
+2. Only use the disclaimer "Regarding rates specifically, current rates aren't listed..." when you DON'T have specific rate information
+3. When providing rates from Firestore, present them clearly with credit tiers, terms, and percentages
+4. If you don't have current rates, then say: "Current rates aren't listed in our data. Please check their latest rate sheet or contact them directly."
+
 LENDER INFORMATION:
-${formatLenderDetails(context.lenders || [])}
+${formatLenderDetails(lenders)}
 
 DEAL HISTORY:
 - Total deals in system: ${deals.length}
 - Recent deals: ${deals.slice(0, 3).map(d => 
   `${d.vehicle.year || ''} ${d.vehicle.model || 'Unknown'} ($${d.deal?.backEndProfit?.toFixed(2) || '0.00'})`
 ).join('; ')}
-
-CRUCIAL INSTRUCTIONS FOR HANDLING LENDER INFORMATION:
-1. Your PRIMARY source of truth for all lender information is the CUDL Quick Reference Guide - ALWAYS check this source first
-2. ONLY use information that explicitly appears in the CUDL Quick Reference Guide when discussing lender guidelines, rates, programs or requirements
-3. When referencing lender information, EXPLICITLY cite the CUDL Quick Reference Guide, e.g., "According to the CUDL Quick Reference Guide..."
-4. If information being requested isn't in the CUDL Quick Reference Guide, clearly state: "That specific information isn't available in the CUDL Quick Reference Guide for [Lender Name]. I recommend checking their current rate sheet."
-5. NEVER make up, guess, or infer information that isn't explicitly stated in the CUDL Quick Reference Guide
-6. When multiple lenders could satisfy a customer's needs, prioritize recommendations based on notes in the CUDL Quick Reference Guide
-7. Pay particular attention to the lender notes section which contains the most valuable insights
 
 Keep responses direct and actionable, like an experienced finance director who references accurate lender information.`;
 
@@ -454,14 +514,17 @@ Keep responses direct and actionable, like an experienced finance director who r
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemMessage },
-        { role: "user", content: question }
+        { role: "user", content: processedQuestion }
       ],
       temperature: 0.7,
-      max_tokens: 500
+      max_tokens: 1200
     });
 
     if (response.choices && response.choices.length > 0) {
-      const aiResponse = response.choices[0].message.content;
+      let aiResponse = response.choices[0].message.content;
+      
+      // Post-process the response for lender questions
+      aiResponse = enhanceLenderResponse(aiResponse, question, lenders);
       
       // Store chat history in Firestore if userId is provided
       if (userId) {
@@ -481,21 +544,189 @@ Keep responses direct and actionable, like an experienced finance director who r
   }
 };
 
-// Add a more comprehensive lender question preprocessor
-function preprocessLenderQuestion(question, lenders) {
-  const lenderKeywords = ['rate', 'guideline', 'program', 'tier', 'credit score', 'eligibility', 'lender', 'finance', 'credit union', 'bank', 'approval', 'ltv', 'advance', 'mileage', 'year', 'used', 'new', 'max loan', 'term', 'warranty', 'gap', 'backend', 'flat'];
+// Update enhanceLenderResponse to remove the rate disclaimer when rates are already provided
+function enhanceLenderResponse(response, question, lenders) {
+  // Apply text normalization to better detect lender mentions
+  const normalizedQuestion = question.toLowerCase().replace(/\bto\b|\bat\b|\bfor\b/, '');
   
-  // Check if question is about lenders
-  const isLenderQuestion = lenderKeywords.some(keyword => 
-    question.toLowerCase().includes(keyword)
+  // Check if this is a rate question
+  const rateKeywords = ['rate', 'apr', 'interest', '%', 'financing', 'tier', 'score', 'month'];
+  const isRateQuestion = rateKeywords.some(keyword => normalizedQuestion.includes(keyword));
+  
+  // If the response already includes specific rates (e.g., percentages), remove the disclaimer
+  if (isRateQuestion && 
+      (response.match(/\d+\.\d+%/) || // Matches patterns like 5.74%
+       response.match(/tier.+\d+(\.\d+)?%/i))) { // Matches "tier... X.XX%"
+    
+    // Remove the standard rate disclaimer paragraph if rates are already provided
+    const disclaimerPattern = /Regarding rates specifically, current rates aren't listed.+check their latest rate sheet.+depend on credit tier, loan term, and vehicle specifics\./s;
+    return response.replace(disclaimerPattern, '');
+  }
+  
+  // Remove any technical implementation details from the response
+  if (response.includes("notes are stored in firestore") || 
+      response.includes("lenders collection")) {
+    return response.replace(/notes are stored in firestore lenders collection/i, 
+      "I don't have complete information for this lender.");
+  }
+  
+  // The rest of the function can remain unchanged
+  return response;
+}
+
+// Enhance the preprocessLenderQuestion function for prioritization
+function preprocessLenderQuestion(question, lenders) {
+  // Log lender information to debug
+  console.log(`preprocessLenderQuestion received ${lenders.length} lenders`);
+  
+  // Group lenders by source for prioritization
+  const firestoreLenders = lenders.filter(l => l.sourceType === 'Firestore Database');
+  const cudlLenders = lenders.filter(l => l.sourceType === 'CUDL Quick Reference Guide');
+  
+  console.log(`Lenders breakdown: ${firestoreLenders.length} Firestore, ${cudlLenders.length} CUDL`);
+  
+  // Normalize the question for better matching
+  const normalizedQuestion = question.toLowerCase().replace(/\bto\b|\bat\b|\bfor\b/, '');
+  
+  // Build lender name map with prioritization (Firestore first)
+  const lenderNameMap = {};
+  
+  // First add Firestore lenders (PRIORITY)
+  firestoreLenders.forEach(lender => {
+    const name = lender.name.toLowerCase();
+    lenderNameMap[name] = lender;
+    
+    // Add variations without "credit union" or "cu" for better matching
+    if (name.includes('credit union')) {
+      lenderNameMap[name.replace('credit union', '').trim()] = lender;
+    }
+    if (name.includes('cu')) {
+      lenderNameMap[name.replace('cu', '').trim()] = lender;
+    }
+  });
+  
+  // Then add CUDL lenders (only if not already in map)
+  cudlLenders.forEach(lender => {
+    const name = lender.name.toLowerCase();
+    if (!lenderNameMap[name]) {
+      lenderNameMap[name] = lender;
+      
+      // Add variations without "credit union" or "cu" for better matching
+      if (name.includes('credit union') && !lenderNameMap[name.replace('credit union', '').trim()]) {
+        lenderNameMap[name.replace('credit union', '').trim()] = lender;
+      }
+      if (name.includes('cu') && !lenderNameMap[name.replace('cu', '').trim()]) {
+        lenderNameMap[name.replace('cu', '').trim()] = lender;
+      }
+    }
+  });
+  
+  // Check if any specific lender is mentioned using the name map
+  const mentionedLenders = [];
+  const lenderKeys = Object.keys(lenderNameMap);
+  
+  for (const key of lenderKeys) {
+    if (normalizedQuestion.includes(key)) {
+      const lender = lenderNameMap[key];
+      if (!mentionedLenders.includes(lender.name.toLowerCase())) {
+        mentionedLenders.push(lender.name.toLowerCase());
+      }
+    }
+  }
+  
+  // Additional check for partial matches (e.g., "noble" for "Noble Credit Union")
+  if (mentionedLenders.length === 0) {
+    for (const lender of lenders) {
+      const nameParts = lender.name.toLowerCase().split(/\s+/);
+      for (const part of nameParts) {
+        // Only consider meaningful name parts (typically 3+ chars)
+        if (part.length >= 3 && normalizedQuestion.includes(part)) {
+          mentionedLenders.push(lender.name.toLowerCase());
+          break;
+        }
+      }
+    }
+  }
+  
+  // Rate-related keywords
+  const rateKeywords = ['rate', 'apr', 'interest', 'percent', '%', 'financing', 
+    'tier', 'score', 'fico', 'points', 'buy rate', 'sell rate', 'current rate', 'offering'];
+  
+  // Check if question is about rates specifically
+  const isRateQuestion = rateKeywords.some(keyword => 
+    normalizedQuestion.includes(keyword)
   );
   
-  if (isLenderQuestion) {
-    return `IMPORTANT: This question appears to be about lender information. Before answering, you MUST:
-1. Review the CUDL Quick Reference Guide information FIRST
-2. Only provide information explicitly stated in the CUDL Quick Reference Guide
-3. Begin your response with "Based on the CUDL Quick Reference Guide..."
-4. If the requested information isn't in the CUDL Quick Reference Guide, clearly state this
+  // Other keywords for general lender questions
+  const lenderKeywords = ['guideline', 'program', 'eligibility', 
+    'lender', 'finance', 'credit union', 'bank', 'approval', 'ltv', 'advance', 
+    'mileage', 'year', 'used', 'new', 'max loan', 'term', 'warranty', 'gap', 
+    'backend', 'flat', 'county', 'restriction', 'limit', 'requirement'];
+  
+  // Check if question is about lenders generally
+  const isLenderQuestion = lenderKeywords.some(keyword => 
+    normalizedQuestion.includes(keyword)
+  );
+  
+  // For debugging
+  console.log(`Detected lenders: ${mentionedLenders.join(', ')}`);
+  console.log(`Is rate question: ${isRateQuestion}`);
+  
+  if (mentionedLenders.length > 0 && isRateQuestion) {
+    // Special handling for specific lender rate questions
+    return `CRITICAL INSTRUCTION: This is a RATE QUESTION about ${mentionedLenders.join(', ')}. 
+
+FIRST: Search carefully through all lenders data and locate exact information for ${mentionedLenders.join(', ')}.
+
+Start your response with comprehensive information about this lender:
+"For ${mentionedLenders.join(', ')}: [insert detailed info including any specific rate percentages if available]"
+
+IMPORTANT:
+- If you find SPECIFIC RATE PERCENTAGES in the data, DO NOT add any disclaimer about rates not being available
+- Only add "Regarding rates specifically, current rates aren't listed..." if you DON'T find specific percentage rates
+- Present all information in a clear, organized manner focusing on what's most relevant to the question
+
+The question is: ${question}`;
+  } else if (mentionedLenders.length > 0) {
+    // Special handling for specific lender mentions (non-rate questions)
+    return `CRITICAL INSTRUCTION: This question is about ${mentionedLenders.join(', ')}. 
+
+DO NOT start your response with "Based on the CUDL Quick Reference Guide" or similar phrases.
+INSTEAD, respond by DIRECTLY starting with the lender information:
+
+"For ${mentionedLenders.join(', ')}: [insert their specific notes here]"
+
+Pay special attention to:
+1. Dealer type requirements
+2. County eligibility 
+3. Maximum advances for new/used vehicles
+4. Vehicle age and mileage limits
+5. Other key requirements
+
+ONLY AFTER sharing the specific information, you may mention it comes from the CUDL Quick Reference Guide.
+
+The question is: ${question}`;
+  } else if (isRateQuestion) {
+    // Special handling for general rate questions
+    return `IMPORTANT: This appears to be a question about RATES. Before answering:
+1. Look for rate-specific information in the CUDL Quick Reference Guide lender notes
+2. Rate information in lender notes takes PRIORITY over any other sources
+3. Begin your response with "Based on the CUDL Quick Reference Guide lender notes:"
+4. If insufficient rate data is available in the lender notes, clearly state this limitation
+
+The rate question is: ${question}`;
+  } else if (isLenderQuestion) {
+    return `IMPORTANT: This appears to be a general lender question.
+
+DO NOT introduce your response with "Based on the CUDL Quick Reference Guide" or similar phrasing.
+INSTEAD, go directly to the relevant lender information and share it directly.
+
+Begin with phrases like:
+- "Most credit unions require..." 
+- "Typical requirements include..."
+- "The lenders serving this area are..."
+
+Only AFTER sharing the specific information should you mention it comes from the reference guide.
 
 The question is: ${question}`;
   }
