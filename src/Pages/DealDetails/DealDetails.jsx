@@ -6,6 +6,7 @@ import { useAuth } from '../../AuthContext';
 import { useLoading } from '../../contexts/LoadingContext';
 import { getLenders } from '../../services/lenderService';
 import './DealDetails.scss';
+import { differenceInDays } from 'date-fns';
 
 function DealDetails() {
   const { dealId } = useParams();
@@ -50,7 +51,9 @@ function DealDetails() {
     productData: {},
     notes: '',
     useManualReserve: false,
-    manualReserveAmount: ''
+    manualReserveAmount: '',
+    sentToBusinessOffice: null,
+    fundedDate: null
   });
   
   useEffect(() => {
@@ -117,7 +120,9 @@ function DealDetails() {
           createdAt: dealData.createdAt,
           updatedAt: dealData.updatedAt,
           useManualReserve: dealData.useManualReserve || false,
-          manualReserveAmount: dealData.manualReserveAmount || 0
+          manualReserveAmount: dealData.manualReserveAmount || 0,
+          sentToBusinessOffice: dealData.sentToBusinessOffice || null,
+          fundedDate: dealData.fundedDate || null
         };
         
         setDeal(formattedDeal);
@@ -170,7 +175,9 @@ function DealDetails() {
           productData: productsObj,
           notes: formattedDeal.notes,
           useManualReserve: dealData.useManualReserve || false,
-          manualReserveAmount: dealData.manualReserveAmount?.toString() || ''
+          manualReserveAmount: dealData.manualReserveAmount?.toString() || '',
+          sentToBusinessOffice: formattedDeal.sentToBusinessOffice || null,
+          fundedDate: formattedDeal.fundedDate || null
         });
         
         setDataLoaded(true);
@@ -342,6 +349,8 @@ function DealDetails() {
         notes: formData.notes,
         useManualReserve: formData.useManualReserve,
         manualReserveAmount: formData.useManualReserve ? parseFloat(formData.manualReserveAmount) || 0 : null,
+        sentToBusinessOffice: formData.sentToBusinessOffice,
+        fundedDate: formData.fundedDate,
         updatedAt: serverTimestamp()
       };
       
@@ -375,6 +384,8 @@ function DealDetails() {
         notes: formData.notes,
         useManualReserve: formData.useManualReserve,
         manualReserveAmount: formData.useManualReserve ? parseFloat(formData.manualReserveAmount) || 0 : null,
+        sentToBusinessOffice: formData.sentToBusinessOffice,
+        fundedDate: formData.fundedDate,
         updatedAt: new Date()
       };
       
@@ -816,6 +827,106 @@ function DealDetails() {
               </div>
             </div>
           </div>
+          
+          <div className="form-section funding-section">
+            <h2>Funding Information</h2>
+            <div className="form-group">
+              <label htmlFor="sentToBusinessOffice">Sent to Business Office</label>
+              <div className="date-control">
+                <input
+                  id="sentToBusinessOffice"
+                  type="date"
+                  value={formData.sentToBusinessOffice ? new Date(formData.sentToBusinessOffice.seconds * 1000).toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      sentToBusinessOffice: e.target.value ? new Date(e.target.value) : null
+                    }));
+                  }}
+                />
+                {!formData.sentToBusinessOffice && (
+                  <button
+                    type="button"
+                    className="date-btn mark-sent-btn"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        sentToBusinessOffice: new Date()
+                      }));
+                    }}
+                  >
+                    Mark as Sent Today
+                  </button>
+                )}
+                {formData.sentToBusinessOffice && (
+                  <button
+                    type="button"
+                    className="date-btn unmark-sent-btn"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        sentToBusinessOffice: null,
+                        fundedDate: null // Also clear funded date since it depends on sent date
+                      }));
+                    }}
+                  >
+                    Clear Date
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="fundedDate">Funded Date</label>
+              <div className="date-control">
+                <input
+                  id="fundedDate"
+                  type="date"
+                  value={formData.fundedDate ? new Date(formData.fundedDate.seconds * 1000).toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      fundedDate: e.target.value ? new Date(e.target.value) : null
+                    }));
+                  }}
+                  disabled={!formData.sentToBusinessOffice}
+                />
+                {formData.sentToBusinessOffice && !formData.fundedDate && (
+                  <button
+                    type="button"
+                    className="date-btn mark-funded-btn"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        fundedDate: new Date()
+                      }));
+                    }}
+                  >
+                    Mark as Funded Today
+                  </button>
+                )}
+                {formData.fundedDate && (
+                  <button
+                    type="button"
+                    className="date-btn unmark-funded-btn"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        fundedDate: null
+                      }));
+                    }}
+                  >
+                    Unmark as Funded
+                  </button>
+                )}
+              </div>
+              {!formData.sentToBusinessOffice && (
+                <div className="field-help">
+                  <small>Deal must be sent to business office before it can be marked as funded</small>
+                </div>
+              )}
+            </div>
+          </div>
         </form>
       ) : (
         <div className="deal-details-content">
@@ -990,6 +1101,234 @@ function DealDetails() {
               <span className="label">Total Profit:</span>
               <span className="value">${calculateTotalProfit(deal).toFixed(2)}</span>
             </div>
+          </div>
+          
+          <div className="details-section funding-section">
+            <h2>Funding Information</h2>
+            <div className="detail-item with-actions">
+              <span className="detail-label">Sent to Business Office:</span>
+              <div className="detail-value-wrapper">
+                <span className="detail-value">
+                  {deal.sentToBusinessOffice ? 
+                    new Date(deal.sentToBusinessOffice.seconds * 1000).toLocaleDateString() : 
+                    'Not yet sent'}
+                </span>
+                
+                <div className="inline-edit-actions">
+                  {deal.sentToBusinessOffice ? (
+                    <>
+                      <button
+                        className="edit-date-btn"
+                        onClick={() => {
+                          const newDate = prompt(
+                            'Enter new date (MM/DD/YYYY):',
+                            new Date(deal.sentToBusinessOffice.seconds * 1000).toLocaleDateString()
+                          );
+                          if (newDate) {
+                            try {
+                              const dateObj = new Date(newDate);
+                              if (!isNaN(dateObj.getTime())) {
+                                showLoading("Updating date...");
+                                const dealRef = doc(db, 'deals', dealId);
+                                updateDoc(dealRef, {
+                                  sentToBusinessOffice: dateObj
+                                }).then(() => {
+                                  setDeal({...deal, sentToBusinessOffice: {seconds: dateObj.getTime() / 1000, nanoseconds: 0}});
+                                  hideLoading();
+                                }).catch(err => {
+                                  console.error("Error updating date:", err);
+                                  setError("Failed to update date");
+                                  hideLoading();
+                                });
+                              } else {
+                                alert("Invalid date format. Please use MM/DD/YYYY format.");
+                              }
+                            } catch (e) {
+                              alert("Invalid date. Please use MM/DD/YYYY format.");
+                            }
+                          }
+                        }}
+                        title="Edit date"
+                      >
+                        <span className="material-icons">edit</span>
+                      </button>
+                      
+                      <button
+                        className="clear-date-btn"
+                        onClick={async () => {
+                          if (window.confirm('Are you sure you want to clear the "Sent to Business Office" date? This will also clear the funded date if set.')) {
+                            try {
+                              showLoading("Updating deal...");
+                              const dealRef = doc(db, 'deals', dealId);
+                              const updateData = { sentToBusinessOffice: null };
+                              
+                              // If there's a funded date, also clear it as it depends on sent date
+                              if (deal.fundedDate) {
+                                updateData.fundedDate = null;
+                              }
+                              
+                              await updateDoc(dealRef, updateData);
+                              
+                              const updatedDeal = {...deal, sentToBusinessOffice: null};
+                              if (deal.fundedDate) {
+                                updatedDeal.fundedDate = null;
+                              }
+                              
+                              setDeal(updatedDeal);
+                              hideLoading();
+                            } catch (error) {
+                              console.error("Error updating deal:", error);
+                              setError("Failed to update deal status");
+                              hideLoading();
+                            }
+                          }
+                        }}
+                        title="Clear date"
+                      >
+                        <span className="material-icons">clear</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="action-btn mark-sent-btn compact"
+                      onClick={async () => {
+                        if (window.confirm('Mark this deal as sent to business office today?')) {
+                          try {
+                            showLoading("Updating deal...");
+                            const dealRef = doc(db, 'deals', dealId);
+                            await updateDoc(dealRef, {
+                              sentToBusinessOffice: new Date()
+                            });
+                            
+                            const updatedDeal = {
+                              ...deal, 
+                              sentToBusinessOffice: {
+                                seconds: Math.floor(Date.now() / 1000),
+                                nanoseconds: 0
+                              }
+                            };
+                            setDeal(updatedDeal);
+                            hideLoading();
+                          } catch (error) {
+                            console.error("Error updating deal:", error);
+                            setError("Failed to update deal status");
+                            hideLoading();
+                          }
+                        }
+                      }}
+                    >
+                      <span className="material-icons">send</span>
+                      Mark as Sent Today
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="detail-item">
+              <span className="detail-label">Funded:</span>
+              <span className="detail-value">
+                {deal.fundedDate ? 
+                  new Date(deal.fundedDate.seconds * 1000).toLocaleDateString() : 
+                  'Not yet funded'}
+              </span>
+            </div>
+            
+            {!deal.sentToBusinessOffice && (
+              <button
+                className="action-btn mark-sent-btn"
+                onClick={async () => {
+                  if (window.confirm('Mark this deal as sent to business office today?')) {
+                    try {
+                      showLoading("Updating deal...");
+                      const dealRef = doc(db, 'deals', dealId);
+                      await updateDoc(dealRef, {
+                        sentToBusinessOffice: new Date()
+                      });
+                      
+                      const updatedDeal = {
+                        ...deal, 
+                        sentToBusinessOffice: {
+                          seconds: Math.floor(Date.now() / 1000),
+                          nanoseconds: 0
+                        }
+                      };
+                      setDeal(updatedDeal);
+                      hideLoading();
+                    } catch (error) {
+                      console.error("Error updating deal:", error);
+                      setError("Failed to update deal status");
+                      hideLoading();
+                    }
+                  }
+                }}
+              >
+                <span className="material-icons">send</span>
+                Mark as Sent to Business Office
+              </button>
+            )}
+            
+            {deal.sentToBusinessOffice && !deal.fundedDate && (
+              <button
+                className="action-btn mark-funded-btn"
+                onClick={async () => {
+                  if (window.confirm('Mark this deal as funded today?')) {
+                    try {
+                      showLoading("Updating deal...");
+                      const dealRef = doc(db, 'deals', dealId);
+                      await updateDoc(dealRef, {
+                        fundedDate: new Date()
+                      });
+                      
+                      const updatedDeal = {
+                        ...deal, 
+                        fundedDate: {
+                          seconds: Math.floor(Date.now() / 1000),
+                          nanoseconds: 0
+                        }
+                      };
+                      setDeal(updatedDeal);
+                      hideLoading();
+                    } catch (error) {
+                      console.error("Error updating deal:", error);
+                      setError("Failed to update deal status");
+                      hideLoading();
+                    }
+                  }
+                }}
+              >
+                <span className="material-icons">paid</span>
+                Mark as Funded
+              </button>
+            )}
+            
+            {deal.fundedDate && (
+              <button
+                className="action-btn unmark-funded-btn"
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to unmark this deal as funded?')) {
+                    try {
+                      showLoading("Updating deal...");
+                      const dealRef = doc(db, 'deals', dealId);
+                      await updateDoc(dealRef, {
+                        fundedDate: null
+                      });
+                      
+                      const updatedDeal = {...deal, fundedDate: null};
+                      setDeal(updatedDeal);
+                      hideLoading();
+                    } catch (error) {
+                      console.error("Error updating deal:", error);
+                      setError("Failed to update deal status");
+                      hideLoading();
+                    }
+                  }
+                }}
+              >
+                <span className="material-icons">money_off</span>
+                Unmark as Funded
+              </button>
+            )}
           </div>
         </div>
       )}

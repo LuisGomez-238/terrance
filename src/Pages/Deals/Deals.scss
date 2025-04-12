@@ -15,6 +15,11 @@ $background-color: #f8f9fa; // Light background
 $card-bg: #ffffff; // White card
 $input-bg: #f5f5f5; // Light gray input background
 $shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
+$warning-color: #f0ad4e; // yellow for warning
+$critical-color: #dc3545; // red for critical
+$funded-color: #28a745; // green for funded deals
+$funded-bg-color: rgba(40, 167, 69, 0.1); // Light green background for funded deals
+$funded-hover-color: rgba(40, 167, 69, 0.2); // Slightly darker green for hover state
 
 .deals-container {
   padding: 1.5rem;
@@ -168,6 +173,16 @@ $shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
         }
       }
       
+      .funding-status-cell {
+        font-weight: 500;
+        
+        .days-since {
+          font-size: 0.85rem;
+          margin-left: 5px;
+          color: $light-text;
+        }
+      }
+      
       .actions-cell {
         text-align: center;
         width: 60px;
@@ -202,6 +217,54 @@ $shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
       
       tr:hover {
         background-color: $table-hover !important;
+      }
+      
+      tr.warning-delay {
+        background-color: rgba($warning-color, 0.15);
+        
+        &:hover {
+          background-color: rgba($warning-color, 0.25) !important;
+        }
+        
+        .funding-status-cell {
+          color: darken($warning-color, 10%);
+          
+          .days-since {
+            color: darken($warning-color, 15%);
+            font-weight: 600;
+          }
+        }
+      }
+      
+      tr.critical-delay {
+        background-color: rgba($critical-color, 0.15);
+        
+        &:hover {
+          background-color: rgba($critical-color, 0.25) !important;
+        }
+        
+        .funding-status-cell {
+          color: $critical-color;
+          font-weight: 600;
+          
+          .days-since {
+            color: $critical-color;
+            font-weight: 600;
+          }
+        }
+      }
+      
+      tr.funded {
+        background-color: $funded-bg-color;
+        
+        &:hover {
+          background-color: $funded-hover-color !important;
+        }
+        
+        .funding-status-cell {
+          color: $funded-color;
+          font-weight: 500;
+        }
       }
     }
   }
@@ -343,4 +406,48 @@ h1 {
 // Update the error message color
 .error-message {
   color: $error-color;
+}
+
+// Add this section for the action buttons
+.actions-container {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    
+    &:hover {
+      transform: translateY(-1px);
+    }
+    
+    .material-icons {
+      font-size: 1.2rem;
+    }
+  }
+  
+  .send-btn:hover {
+    background-color: #3498db;
+    color: white;
+  }
+  
+  .fund-btn:hover {
+    background-color: $funded-color;
+    color: white;
+  }
+}
+
+// Add styling for the unfund button
+.unfund-btn:hover {
+  background-color: #dc3545;
+  color: white;
 }

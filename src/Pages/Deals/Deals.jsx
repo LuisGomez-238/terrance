@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { collection, getDocs, query, where, orderBy, limit, getFirestore, getDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, getFirestore, getDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import './Deals.scss';
 import { useLoading } from '../../contexts/LoadingContext';
+import { differenceInDays } from 'date-fns';
 
 function Deals() {
   const { currentUser } = useAuth();
@@ -60,6 +61,20 @@ function Deals() {
         }
         
         if (data.userId === currentUser.uid) {
+          // Calculate funding status and days passed
+          let fundingStatus = 'Not Sent';
+          let daysSinceSent = 0;
+          
+          if (data.sentToBusinessOffice && data.sentToBusinessOffice.toDate) {
+            const sentDate = data.sentToBusinessOffice.toDate();
+            fundingStatus = 'Sent to Business Office';
+            daysSinceSent = differenceInDays(new Date(), sentDate);
+            
+            if (data.fundedDate) {
+              fundingStatus = 'Funded';
+            }
+          }
+          
           const dealData = {
             id: docId,
             customer: typeof data.customer === 'object' ? data.customer.name : data.customer,
@@ -72,6 +87,12 @@ function Deals() {
             loanTerm: data.loanTerm || 0,
             products: Array.isArray(data.products) ? data.products : [],
             backEndProfit: data.backEndProfit || data.profit || 0,
+            sentToBusinessOffice: data.sentToBusinessOffice || null,
+            fundedDate: data.fundedDate || null,
+            fundingStatus: data.fundedDate ? 'Funded' : 
+                          data.sentToBusinessOffice ? 'Sent to Business Office' : 
+                          'Not Sent',
+            daysSinceSent: daysSinceSent,
             _fetchTime: Date.now(),
             ...data
           };
@@ -118,6 +139,17 @@ function Deals() {
             
             if (dealIndex !== -1) {
               const data = docSnapshot.data();
+              // Calculate the status from the data, not rely on stored status
+              const fundingStatus = data.fundedDate ? 'Funded' : 
+                                   data.sentToBusinessOffice ? 'Sent to Business Office' : 
+                                   'Not Sent';
+                                   
+              let daysSinceSent = 0;
+              if (data.sentToBusinessOffice && !data.fundedDate) {
+                const sentDate = data.sentToBusinessOffice.toDate();
+                daysSinceSent = differenceInDays(new Date(), sentDate);
+              }
+              
               updatedDeals[dealIndex] = {
                 ...updatedDeals[dealIndex],
                 customer: typeof data.customer === 'object' ? data.customer.name : data.customer,
@@ -130,6 +162,10 @@ function Deals() {
                 loanTerm: data.loanTerm || 0,
                 products: Array.isArray(data.products) ? data.products : [],
                 backEndProfit: data.backEndProfit || data.profit || 0,
+                sentToBusinessOffice: data.sentToBusinessOffice || null,
+                fundedDate: data.fundedDate || null,
+                fundingStatus: fundingStatus,
+                daysSinceSent: daysSinceSent,
                 _fetchTime: Date.now(),
                 ...data
               };
@@ -351,6 +387,95 @@ function Deals() {
     </Link>
   );
 
+  const handleMarkAsSent = async (dealId) => {
+    try {
+      showLoading("Updating deal status...");
+      const dealRef = doc(db, 'deals', dealId);
+      
+      await updateDoc(dealRef, {
+        sentToBusinessOffice: new Date(),
+      });
+      
+      console.log("Deal marked as sent to business office");
+      setRefreshKey(prevKey => prevKey + 1);
+    } catch (error) {
+      console.error("Error updating deal:", error);
+      setError("Failed to update deal status");
+    } finally {
+      hideLoading();
+    }
+  };
+
+  const handleMarkAsFunded = async (dealId) => {
+    try {
+      showLoading("Updating deal status...");
+      const dealRef = doc(db, 'deals', dealId);
+      
+      await updateDoc(dealRef, {
+        fundedDate: new Date(),
+      });
+      
+      console.log("Deal marked as funded");
+      setRefreshKey(prevKey => prevKey + 1);
+    } catch (error) {
+      console.error("Error updating deal:", error);
+      setError("Failed to update deal status");
+    } finally {
+      hideLoading();
+    }
+  };
+
+  const handleUnmarkFunded = async (dealId) => {
+    try {
+      if (!window.confirm('Are you sure you want to unmark this deal as funded?')) {
+        return;
+      }
+      
+      showLoading("Updating deal status...");
+      const dealRef = doc(db, 'deals', dealId);
+      
+      await updateDoc(dealRef, {
+        fundedDate: null,
+      });
+      
+      console.log("Deal unmarked as funded");
+      setRefreshKey(prevKey => prevKey + 1);
+    } catch (error) {
+      console.error("Error updating deal:", error);
+      setError("Failed to update deal status");
+    } finally {
+      hideLoading();
+    }
+  };
+
+  const getFundingStatusClass = (deal) => {
+    // If the deal has a fundedDate, it's funded regardless of fundingStatus string
+    if (deal.fundedDate) {
+      return 'funded';
+    }
+    
+    // Continue with the existing logic for non-funded deals
+    if (deal.fundingStatus === 'Sent to Business Office' || 
+        (deal.sentToBusinessOffice && !deal.fundedDate)) {
+      // Calculate days since sent using the actual timestamp
+      let daysSinceSent = 0;
+      if (deal.sentToBusinessOffice && deal.sentToBusinessOffice.toDate) {
+        const sentDate = deal.sentToBusinessOffice.toDate();
+        daysSinceSent = differenceInDays(new Date(), sentDate);
+      } else if (deal.daysSinceSent) {
+        daysSinceSent = deal.daysSinceSent;
+      }
+      
+      if (daysSinceSent >= 10) {
+        return 'critical-delay';
+      } else if (daysSinceSent >= 5) {
+        return 'warning-delay';
+      }
+    }
+    
+    return '';
+  };
+
   // Return null when data is loading - let the global spinner handle it
   if (!dataLoaded && !error) {
     return null;
@@ -410,12 +535,13 @@ function Deals() {
                 <th>Date</th>
                 <th>Lender</th>
                 <th>Total Profit</th>
-                <th></th>
+                <th>Funding Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredDeals.map(deal => (
-                <tr key={deal.id}>
+                <tr key={deal.id} className={getFundingStatusClass(deal)}>
                   <td className="customer-cell">{deal.customer}</td>
                   <td>{formatVehicleSimple(deal.vehicle)}</td>
                   <td>{formatDate(deal.dateSold || deal.date)}</td>
@@ -423,8 +549,57 @@ function Deals() {
                   <td className={`profit ${calculateTotalProfit(deal) > 0 ? 'positive' : 'negative'}`}>
                     ${calculateTotalProfit(deal).toFixed(2)}
                   </td>
+                  <td className="funding-status-cell">
+                    {deal.fundingStatus}
+                    {deal.fundingStatus === 'Sent to Business Office' && !deal.fundedDate && (
+                      <span className="days-since">
+                        ({deal.daysSinceSent} days)
+                      </span>
+                    )}
+                  </td>
                   <td className="actions-cell">
-                    <ViewButton dealId={deal.id} />
+                    <div className="actions-container">
+                      <ViewButton dealId={deal.id} />
+                      
+                      {!deal.sentToBusinessOffice && (
+                        <button 
+                          className="action-btn send-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsSent(deal.id);
+                          }}
+                          title="Mark as Sent to Business Office"
+                        >
+                          <span className="material-icons">send</span>
+                        </button>
+                      )}
+                      
+                      {deal.sentToBusinessOffice && !deal.fundedDate && (
+                        <button 
+                          className="action-btn fund-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsFunded(deal.id);
+                          }}
+                          title="Mark as Funded"
+                        >
+                          <span className="material-icons">paid</span>
+                        </button>
+                      )}
+                      
+                      {deal.fundedDate && (
+                        <button 
+                          className="action-btn unfund-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnmarkFunded(deal.id);
+                          }}
+                          title="Unmark as Funded"
+                        >
+                          <span className="material-icons">money_off</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

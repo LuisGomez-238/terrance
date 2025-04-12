@@ -436,8 +436,20 @@ MY QUESTION: ${userQuery}`;
       throw new Error('No response received from assistant');
     }
     
-    // Extract and return the content
-    return assistantMessage.content[0].text.value;
+    // Extract the content from the assistant's message
+    let responseText = assistantMessage.content[0].text.value;
+    
+    // Clean up citation references like 【5:1†GOLDEN 1 CU_notes_1744009178982.txt】
+    // This pattern matches text inside characters like 【】 that looks like a citation
+    responseText = responseText.replace(/【[^【】]*?(?:\_notes\_|\†|\d+\.txt)[^【】]*?】/g, '');
+    
+    // Also clean up any markdown-like citations with square brackets and numbers like [1], [2], etc.
+    responseText = responseText.replace(/\[\d+\]/g, '');
+    
+    // Trim any whitespace that might be left at the end after removing citations
+    responseText = responseText.trim();
+    
+    return responseText;
   } catch (error) {
     console.error('Error interacting with OpenAI:', error);
     throw new Error('Failed to get response from assistant');
