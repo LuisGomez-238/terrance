@@ -373,6 +373,14 @@ const AiAssistant = () => {
         });
         
         setUserContext(context);
+        
+        // Add a welcome message once data is loaded
+        if (messages.length === 0) {
+          setMessages([{
+            role: 'assistant',
+            content: `Hi ${profile?.name || currentUser.displayName || "there"}! I'm Terrance, your AI assistant. How can I help you today?`
+          }]);
+        }
       } catch (error) {
         console.error('Error fetching user performance data:', error);
         
@@ -861,34 +869,29 @@ const AiAssistant = () => {
 
   return (
     <div className="ai-assistant-container">
-      <div className="ai-assistant-header">
-        <h1>Terrance AI Assistant</h1>
-        <div className="header-controls">
-          <button 
-            className="refresh-button" 
-            onClick={refreshPerformanceData} 
-            disabled={isLoading}
-            title="Refresh your performance data"
-          >
-            Refresh Data
-          </button>
-        </div>
-        <p>Ask questions about lender guidelines, policies, or get personalized recommendations</p>
-      </div>
-      
       <div className="chat-container">
         <div className="messages-container">
           {messages.length === 0 && (
             <div className="welcome-message">
-              <h2>Welcome to Terrance AI Assistant</h2>
+              <h2>Hello! I'm Terrance</h2>
               <p>I can help you with lender information and personalized recommendations. Try asking:</p>
-              <ul>
-                <li>What are the income verification requirements for GOLDEN1?</li>
-                <li>What are NOBLECU's guidelines for debt-to-income ratios?</li>
-                <li>Which lender would be best for my customer with a 620 credit score?</li>
-                <li>How can I improve my products per deal?</li>
-                <li>What strategies can help improve my approval rate?</li>
-              </ul>
+              <div className="example-questions">
+                <div className="example-question" onClick={() => setInput("What are the income verification requirements for GOLDEN1?")}>
+                  What are the income verification requirements for GOLDEN1?
+                </div>
+                <div className="example-question" onClick={() => setInput("What are NOBLECU's guidelines for debt-to-income ratios?")}>
+                  What are NOBLECU's guidelines for debt-to-income ratios?
+                </div>
+                <div className="example-question" onClick={() => setInput("Which lender would be best for my customer with a 620 credit score?")}>
+                  Which lender would be best for my customer with a 620 credit score?
+                </div>
+                <div className="example-question" onClick={() => setInput("How can I improve my products per deal?")}>
+                  How can I improve my products per deal?
+                </div>
+                <div className="example-question" onClick={() => setInput("What strategies can help improve my approval rate?")}>
+                  What strategies can help improve my approval rate?
+                </div>
+              </div>
             </div>
           )}
           
@@ -897,6 +900,7 @@ const AiAssistant = () => {
               key={index} 
               className={`message ${message.role === 'user' ? 'user-message' : 'assistant-message'}`}
             >
+              {message.role === 'assistant' && <div className="avatar">T</div>}
               <div className="message-content">
                 {message.content}
               </div>
@@ -905,6 +909,7 @@ const AiAssistant = () => {
           
           {isLoading && (
             <div className="message assistant-message">
+              <div className="avatar">T</div>
               <div className="message-content loading">
                 <div className="typing-indicator">
                   <span></span>
@@ -923,11 +928,14 @@ const AiAssistant = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about lender guidelines or get recommendations..."
+            placeholder="Ask me anything about lenders, guidelines, or finance strategies..."
             disabled={isLoading}
           />
           <button type="submit" disabled={isLoading || !input.trim()}>
-            {isLoading ? 'Processing...' : 'Send'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
           </button>
         </form>
       </div>

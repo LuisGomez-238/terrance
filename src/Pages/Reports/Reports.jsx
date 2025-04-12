@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
-import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, setMonth, setYear } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import './Reports.scss';
 import { useProfile } from '../../contexts/ProfileContext';
@@ -19,11 +19,12 @@ function Reports() {
   // Remove local loading state
   const [error, setError] = useState(null);
   const [reportType, setReportType] = useState('monthly');
-  const [timeRange, setTimeRange] = useState('6');
+  const [timeRange, setTimeRange] = useState('current');
   const [monthlyData, setMonthlyData] = useState([]);
   const [productData, setProductData] = useState([]);
   const [lenderData, setLenderData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // 0-11 for Jan-Dec
   const [monthlyGoal, setMonthlyGoal] = useState(userProfile.monthlyTarget || 10000);
   const [dataLoaded, setDataLoaded] = useState(false); // Track data loaded state
   const [productPenetrationData, setProductPenetrationData] = useState([]);
@@ -34,6 +35,25 @@ function Reports() {
   // Get loading functions from context
   const { showLoading, hideLoading } = useLoading();
   
+  // Generate array of years (current year and 4 years back)
+  const availableYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+  
+  // Generate array of months for dropdown
+  const months = [
+    { value: 0, label: 'January' },
+    { value: 1, label: 'February' },
+    { value: 2, label: 'March' },
+    { value: 3, label: 'April' },
+    { value: 4, label: 'May' },
+    { value: 5, label: 'June' },
+    { value: 6, label: 'July' },
+    { value: 7, label: 'August' },
+    { value: 8, label: 'September' },
+    { value: 9, label: 'October' },
+    { value: 10, label: 'November' },
+    { value: 11, label: 'December' }
+  ];
+  
   // Update useEffect to react to profile changes
   useEffect(() => {
     if (userProfile && userProfile.monthlyTarget) {
@@ -41,6 +61,18 @@ function Reports() {
       setMonthlyGoal(userProfile.monthlyTarget);
     }
   }, [userProfile.monthlyTarget]);
+  
+  // Handler for timeRange change
+  const handleTimeRangeChange = (e) => {
+    const newValue = e.target.value;
+    setTimeRange(newValue);
+    
+    // If switching to specific month, we need to update the dropdowns to current month
+    if (newValue === 'specific') {
+      setSelectedMonth(new Date().getMonth());
+      setSelectedYear(new Date().getFullYear());
+    }
+  };
   
   // Main effect for fetching report data
   useEffect(() => {
@@ -77,8 +109,32 @@ function Reports() {
         
         await fetchUserMonthlyTarget();
         
-        const months = parseInt(timeRange);
+        // Determine date range based on timeRange selection
         const today = new Date();
+        let startDate;
+        let endDate;
+        let months;
+        
+        if (timeRange === 'specific') {
+          // Specific month selected
+          let specificDate = new Date();
+          specificDate = setYear(specificDate, selectedYear);
+          specificDate = setMonth(specificDate, selectedMonth);
+          
+          startDate = startOfMonth(specificDate);
+          endDate = endOfMonth(specificDate);
+          months = 1;
+        } else if (timeRange === 'current') {
+          // Current month to date
+          startDate = startOfMonth(today);
+          endDate = today;
+          months = 1;
+        } else {
+          // For other time ranges (3, 6, 12 months)
+          months = parseInt(timeRange);
+          startDate = startOfMonth(subMonths(today, months - 1));
+          endDate = today;
+        }
         
         // Fetch all deals for the current user
         const dealsRef = collection(db, 'deals');
@@ -109,8 +165,12 @@ function Reports() {
           }
           
           // Skip deals that are outside our time range
-          const startDate = startOfMonth(subMonths(today, months - 1));
           if (dealDate < startDate) {
+            return;
+          }
+          
+          // For specific month, also check the end date
+          if (timeRange === 'specific' && dealDate > endDate) {
             return;
           }
           
@@ -198,12 +258,13 @@ function Reports() {
         const lenderCounts = {};
         const lenderProfits = {};
         
-        // Generate month data structure for the past months
-        for (let i = months - 1; i >= 0; i--) {
-          const date = subMonths(today, i);
-          const monthStart = startOfMonth(date);
-          const monthEnd = endOfMonth(date);
-          const monthName = format(date, 'MMM yyyy');
+        // Generate month data structure based on time range
+        if (timeRange === 'specific') {
+          // For specific month, we just need one month
+          const specificDate = new Date(selectedYear, selectedMonth, 1);
+          const monthStart = startOfMonth(specificDate);
+          const monthEnd = endOfMonth(specificDate);
+          const monthName = format(specificDate, 'MMM yyyy');
           
           // Filter deals for this month
           const monthDeals = deals.filter(deal => 
@@ -224,7 +285,7 @@ function Reports() {
             goal: monthlyGoal
           });
           
-          // Process product data
+          // Process product and lender data
           monthDeals.forEach(deal => {
             if (Array.isArray(deal.products)) {
               deal.products.forEach(product => {
@@ -232,12 +293,53 @@ function Reports() {
               });
             }
             
-            // Process lender data
             if (deal.lender) {
               lenderCounts[deal.lender] = (lenderCounts[deal.lender] || 0) + 1;
               lenderProfits[deal.lender] = (lenderProfits[deal.lender] || 0) + deal.profit;
             }
           });
+        } else {
+          // For other time ranges
+          for (let i = months - 1; i >= 0; i--) {
+            const date = subMonths(today, i);
+            const monthStart = startOfMonth(date);
+            const monthEnd = endOfMonth(date);
+            const monthName = format(date, 'MMM yyyy');
+            
+            // Filter deals for this month
+            const monthDeals = deals.filter(deal => 
+              isWithinInterval(deal.date, { start: monthStart, end: monthEnd })
+            );
+            
+            const totalProfit = monthDeals.reduce((sum, deal) => sum + deal.profit, 0);
+            const avgProfit = monthDeals.length > 0 ? totalProfit / monthDeals.length : 0;
+            const totalProducts = monthDeals.reduce((sum, deal) => sum + deal.productCount, 0);
+            const productsPerDeal = monthDeals.length > 0 ? totalProducts / monthDeals.length : 0;
+            
+            monthlyProfitData.push({
+              month: monthName,
+              deals: monthDeals.length,
+              backEndProfit: totalProfit,
+              avgProfit,
+              productsPerDeal,
+              goal: monthlyGoal
+            });
+            
+            // Process product data
+            monthDeals.forEach(deal => {
+              if (Array.isArray(deal.products)) {
+                deal.products.forEach(product => {
+                  productCounts[product] = (productCounts[product] || 0) + 1;
+                });
+              }
+              
+              // Process lender data
+              if (deal.lender) {
+                lenderCounts[deal.lender] = (lenderCounts[deal.lender] || 0) + 1;
+                lenderProfits[deal.lender] = (lenderProfits[deal.lender] || 0) + deal.profit;
+              }
+            });
+          }
         }
         
         // Format product data for chart
@@ -254,7 +356,7 @@ function Reports() {
           avgProfit: lenderProfits[name] / lenderCounts[name]
         })).sort((a, b) => b.deals - a.deals);
         
-        // Calculate product penetration (what percentage of all deals have each product)
+        // Calculate product penetration
         const totalDeals = deals.length;
         const productPenetration = Object.keys(productCounts).map(name => {
           const count = productCounts[name];
@@ -262,14 +364,12 @@ function Reports() {
           
           return {
             name,
-            value: penetrationRate, // Percentage of deals that have this product
-            count // Actual count for the tooltip
+            value: penetrationRate,
+            count
           };
         }).sort((a, b) => b.value - a.value);
         
         console.log('Monthly data:', monthlyProfitData);
-        console.log('Product data entries:', productChartData.length);
-        console.log('Lender data entries:', lenderChartData.length);
         
         setMonthlyData(monthlyProfitData);
         setProductData(productChartData);
@@ -285,7 +385,7 @@ function Reports() {
     };
     
     fetchReportData();
-  }, [currentUser, timeRange, reportType, selectedYear, monthlyGoal]);
+  }, [currentUser, timeRange, reportType, selectedYear, selectedMonth, monthlyGoal]);
   
   const exportToCsv = () => {
     let csvContent = "";
@@ -355,13 +455,48 @@ function Reports() {
             <label>Time Range</label>
             <select
               value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
+              onChange={handleTimeRangeChange}
             >
+              <option value="current">Current Month to Date</option>
+              <option value="specific">Specific Month</option>
               <option value="3">Last 3 Months</option>
               <option value="6">Last 6 Months</option>
               <option value="12">Last 12 Months</option>
             </select>
           </div>
+          
+          {/* Show month/year selectors only when specific month is selected */}
+          {timeRange === 'specific' && (
+            <>
+              <div className="control-group">
+                <label>Month</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                >
+                  {months.map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="control-group">
+                <label>Year</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                >
+                  {availableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+          
           <button className="export-btn" onClick={exportToCsv}>
             Export to CSV
           </button>
