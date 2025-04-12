@@ -143,6 +143,27 @@ $funded-hover-color: rgba(40, 167, 69, 0.2); // Slightly darker green for hover 
         text-transform: uppercase;
         letter-spacing: 0.05em;
         background-color: $table-header !important;
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        padding-right: 20px; // Make space for the sort icon
+        
+        &:hover {
+          background-color: darken($table-header, 5%);
+        }
+        
+        &.sorted-asc, &.sorted-desc {
+          background-color: darken($table-header, 8%);
+          color: $primary-color;
+        }
+        
+        .sort-icon {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 14px;
+        }
       }
       
       td {
@@ -309,9 +330,11 @@ $funded-hover-color: rgba(40, 167, 69, 0.2); // Slightly darker green for hover 
         }
       }
       
-      th, td {
-        &:nth-child(7) { // This is the Business Office column
-          width: 160px; // Increase width to accommodate the longer text
+      th:last-child {
+        cursor: default;
+        
+        &:hover {
+          background-color: $table-header;
         }
       }
     }
@@ -498,4 +521,53 @@ h1 {
 .unfund-btn:hover {
   background-color: #dc3545;
   color: white;
+}
+
+// Add these styles for both bullet and house deal indicators
+
+// Indicators in the customer cell
+.customer-cell {
+  display: flex;
+  align-items: center;
+  
+  .bullet-indicator, .house-indicator {
+    margin-left: 8px;
+    font-size: 14px;
+  }
+  
+  .bullet-indicator {
+    color: #e74c3c;
+  }
+  
+  .house-indicator {
+    color: #28a745;
+  }
+}
+
+// Optional: Add subtle background colors for the different deal types
+tr.bullet-deal {
+  // Very subtle background for bullet deals
+  background-color: rgba(231, 76, 60, 0.03);
+  
+  &:hover {
+    background-color: rgba(231, 76, 60, 0.06);
+  }
+}
+
+tr.house-deal {
+  // Very subtle background for house deals
+  background-color: rgba(40, 167, 69, 0.03);
+  
+  &:hover {
+    background-color: rgba(40, 167, 69, 0.06);
+  }
+}
+
+// If a deal is both bullet and house, the bullet style takes precedence
+tr.bullet-deal.house-deal {
+  background-color: rgba(231, 76, 60, 0.03);
+  
+  &:hover {
+    background-color: rgba(231, 76, 60, 0.06);
+  }
 }

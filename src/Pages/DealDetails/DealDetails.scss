@@ -871,3 +871,60 @@ $funded-color: #28a745;
     font-size: 1rem;
   }
 }
+
+// Clean horizontal layout for the deal types
+.deal-types-container {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+// Zero-space checkbox style
+.zero-space-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+  
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  
+  label {
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    font-size: 0.95rem;
+    color: $dark-text;
+    font-weight: 500;
+    cursor: pointer;
+  }
+}
+
+// Keep the view mode indicators more subtle but still visually distinct
+.deal-types-section {
+  
+  .deal-type-indicators {
+    display: flex;
+  }
+
+}
+
+// Simple horizontal layout for deal types in view mode
+.deal-types {
+  display: flex;  
+  .deal-type {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 500;
+    font-size: 0.95rem;
+    
+    span {
+      display: flex;
+      align-items: center;
+    }
+  }
+  
+}

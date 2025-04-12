@@ -20,19 +20,15 @@ function DealDetails() {
   const [dataLoaded, setDataLoaded] = useState(false);
   
   const availableProducts = [
-    { id: 'warranty', name: 'Extended Warranty' },
-    { id: 'gap', name: 'GAP Insurance' },
-    { id: 'paintProtection', name: 'Paint Protection' },
-    { id: 'tireWheel', name: 'Tire & Wheel Protection' },
-    { id: 'keyReplacement', name: 'Key Replacement' },
-    { id: 'maintenance', name: 'Maintenance Plan' },
-    { id: 'theftCode', name: 'Theft Code' },
-    { id: 'vsc', name: 'VSC (Vehicle Service Contract)' },
-    { id: 'finishingTouch', name: 'Finishing Touch' },
-    { id: 'karrSecurity', name: 'KARR Security' },
-    { id: 'karrGuard', name: 'KARR Guard' },
-    { id: 'swat', name: 'S.W.A.T' },
-    { id: 'lifetimeBattery', name: 'Lifetime Battery' }
+    { id: 'theftCode', name: 'Theft Code', value: false },
+    { id: 'vsc', name: 'VSC (Vehicle Service Contract)', value: false },
+    { id: 'gap', name: 'GAP Insurance', value: false },
+    { id: 'finishingTouch', name: 'Finishing Touch', value: false },
+    { id: 'maintenance', name: 'Maintenance Plan', value: false },
+    { id: 'karrSecurity', name: 'KARR Security', value: false },
+    { id: 'karrGuard', name: 'KARR Guard', value: false },
+    { id: 'swat', name: 'S.W.A.T', value: false },
+    { id: 'lifetimeBattery', name: 'Lifetime Battery', value: false }
   ];
   
   const [formData, setFormData] = useState({
@@ -53,7 +49,9 @@ function DealDetails() {
     useManualReserve: false,
     manualReserveAmount: '',
     sentToBusinessOffice: null,
-    fundedDate: null
+    fundedDate: null,
+    isBullet: false,
+    houseDeal: false
   });
   
   useEffect(() => {
@@ -123,7 +121,9 @@ function DealDetails() {
           manualReserveAmount: dealData.manualReserveAmount || 0,
           sentToBusinessOffice: dealData.sentToBusinessOffice || null,
           fundedDate: dealData.fundedDate || null,
-          dateSold: dealData.dateSold || null
+          dateSold: dealData.dateSold || null,
+          isBullet: dealData.isBullet || false,
+          houseDeal: dealData.houseDeal || false
         };
         
         setDeal(formattedDeal);
@@ -178,7 +178,9 @@ function DealDetails() {
           useManualReserve: dealData.useManualReserve || false,
           manualReserveAmount: dealData.manualReserveAmount?.toString() || '',
           sentToBusinessOffice: formattedDeal.sentToBusinessOffice || null,
-          fundedDate: formattedDeal.fundedDate || null
+          fundedDate: formattedDeal.fundedDate || null,
+          isBullet: formattedDeal.isBullet || false,
+          houseDeal: formattedDeal.houseDeal || false
         });
         
         setDataLoaded(true);
@@ -352,6 +354,8 @@ function DealDetails() {
         manualReserveAmount: formData.useManualReserve ? parseFloat(formData.manualReserveAmount) || 0 : null,
         sentToBusinessOffice: formData.sentToBusinessOffice,
         fundedDate: formData.fundedDate,
+        isBullet: formData.isBullet,
+        houseDeal: formData.houseDeal,
         updatedAt: serverTimestamp()
       };
       
@@ -387,6 +391,8 @@ function DealDetails() {
         manualReserveAmount: formData.useManualReserve ? parseFloat(formData.manualReserveAmount) || 0 : null,
         sentToBusinessOffice: formData.sentToBusinessOffice,
         fundedDate: formData.fundedDate,
+        isBullet: formData.isBullet,
+        houseDeal: formData.houseDeal,
         updatedAt: new Date()
       };
       
@@ -761,6 +767,33 @@ function DealDetails() {
                     </tr>
                   </tfoot>
                 </table>
+                <div className="deal-types-container">
+                <div className="form-group zero-space-checkbox">
+                  <input
+                    type="checkbox"
+                    id="isBullet"
+                    checked={formData.isBullet}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      isBullet: e.target.checked
+                    }))}
+                  />
+                  <label htmlFor="isBullet">Bullet</label>
+                </div>
+                
+                <div className="form-group zero-space-checkbox">
+                  <input
+                    type="checkbox"
+                    id="isHouseDeal"
+                    checked={formData.houseDeal}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      houseDeal: e.target.checked
+                    }))}
+                  />
+                  <label htmlFor="isHouseDeal">House Deal</label>
+                </div>
+              </div>
               </div>
             </div>
           </div>
@@ -1198,6 +1231,22 @@ function DealDetails() {
               </button>
             )}
           </div>
+          
+          {(deal.isBullet || deal.houseDeal) && (
+            <div className="deal-types">
+              {deal.isBullet && (
+                <div className="deal-type bullet-deal">
+                  <span>🔴 Bullet Deal</span>
+                </div>
+              )}
+              
+              {deal.houseDeal && (
+                <div className="deal-type house-deal">
+                  <span>🏠 House Deal</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

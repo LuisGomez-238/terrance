@@ -17,6 +17,8 @@ function Deals() {
   const location = useLocation();
   const [refreshKey, setRefreshKey] = useState(0);
   const [viewedDeals, setViewedDeals] = useState({});
+  const [sortField, setSortField] = useState('dateSold'); // Default sort by date sold
+  const [sortDirection, setSortDirection] = useState('desc'); // Default newest first
 
   const fetchDeals = useCallback(async () => {
     if (!currentUser) {
@@ -226,25 +228,7 @@ function Deals() {
     }
   }, [location]);
 
-  const filterDeals = () => {
-    if (!searchTerm.trim()) return deals;
-    
-    return deals.filter(deal => {
-      const customerName = typeof deal.customer === 'object' ? deal.customer.name : deal.customer;
-      const customerMatch = customerName && customerName.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const vehicleMatch = deal.vehicle && (
-        (deal.vehicle.year && deal.vehicle.year.toString().includes(searchTerm)) ||
-        (deal.vehicle.model && deal.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (deal.vehicle.vin && deal.vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-      
-      return customerMatch || vehicleMatch;
-    });
-  };
-
-  const filteredDeals = filterDeals();
-
+  // Format date helper function
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -284,25 +268,19 @@ function Deals() {
   const calculateTotalProfit = (deal) => {
     // First, check if we already have a totalProfit value from Firebase
     if (deal.totalProfit !== undefined && deal.totalProfit !== null) {
-      console.log(`Using stored totalProfit (${deal.totalProfit}) for deal: ${deal.id}`);
       return parseFloat(deal.totalProfit);
     }
     
     // If not, check for backEndProfit or profit fields
     if (deal.backEndProfit !== undefined && deal.backEndProfit !== null) {
-      console.log(`Using stored backEndProfit (${deal.backEndProfit}) for deal: ${deal.id}`);
       return parseFloat(deal.backEndProfit);
     }
     
     if (deal.profit !== undefined && deal.profit !== null) {
-      console.log(`Using stored profit (${deal.profit}) for deal: ${deal.id}`);
       return parseFloat(deal.profit);
     }
     
     // As a last resort, calculate it manually
-    console.log(`No stored profit value for deal: ${deal.id}, calculating manually`);
-    
-    // Calculate product profits
     let productsProfit = 0;
     
     if (Array.isArray(deal.products)) {
@@ -335,16 +313,6 @@ function Deals() {
     
     const total = productsProfit + financeReserve + additionalProfit;
     
-    // Log for debugging
-    console.log('Deal profit calculation:', {
-      id: deal.id,
-      customer: deal.customer,
-      productsProfit,
-      financeReserve,
-      additionalProfit,
-      total
-    });
-    
     // Total backend profit is products + finance reserve + additional profit
     return total;
   };
@@ -363,7 +331,6 @@ function Deals() {
     
     if (loanAmount && loanTerm && sellRate >= buyRate) {
       // Standard formula for reserve calculation
-      // This is a simplified calculation - actual formula may vary by lender
       const rateSpread = sellRate - buyRate;
       const reservePercentage = rateSpread * 2; // Typical 2:1 ratio for reserve percentage
       
@@ -374,6 +341,123 @@ function Deals() {
     
     return 0;
   };
+
+  // Now define the sort handler
+  const handleSort = (field) => {
+    // If clicking the same field, toggle direction
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new field, set it as the sort field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Then define getSortedDeals
+  const getSortedDeals = (deals) => {
+    if (!sortField) return deals;
+    
+    return [...deals].sort((a, b) => {
+      let valueA, valueB;
+      
+      // Handle special cases for different column types
+      switch (sortField) {
+        case 'customer':
+          valueA = typeof a.customer === 'string' ? a.customer.toLowerCase() : '';
+          valueB = typeof b.customer === 'string' ? b.customer.toLowerCase() : '';
+          break;
+          
+        case 'vehicle':
+          valueA = formatVehicleSimple(a.vehicle).toLowerCase();
+          valueB = formatVehicleSimple(b.vehicle).toLowerCase();
+          break;
+          
+        case 'dateSold':
+          valueA = a.dateSold ? new Date(a.dateSold.toDate ? a.dateSold.toDate() : a.dateSold).getTime() : 0;
+          valueB = b.dateSold ? new Date(b.dateSold.toDate ? b.dateSold.toDate() : b.dateSold).getTime() : 0;
+          break;
+          
+        case 'lender':
+          valueA = (a.lenderName || a.lenderId || '').toLowerCase();
+          valueB = (b.lenderName || b.lenderId || '').toLowerCase();
+          break;
+          
+        case 'profit':
+          valueA = calculateTotalProfit(a);
+          valueB = calculateTotalProfit(b);
+          break;
+          
+        case 'fundingStatus':
+          // First sort by funded/not funded, then by days
+          if (a.fundedDate && !b.fundedDate) {
+            valueA = 1; 
+            valueB = 0;
+          } else if (!a.fundedDate && b.fundedDate) {
+            valueA = 0; 
+            valueB = 1;
+          } else if (a.fundedDate && b.fundedDate) {
+            valueA = valueB = 1;
+          } else {
+            valueA = a.daysSinceSold || 0;
+            valueB = b.daysSinceSold || 0;
+          }
+          break;
+          
+        case 'sentToBO':
+          // First by whether it's sent or not, then by date
+          if (a.sentToBusinessOffice && !b.sentToBusinessOffice) {
+            valueA = 1; 
+            valueB = 0;
+          } else if (!a.sentToBusinessOffice && b.sentToBusinessOffice) {
+            valueA = 0; 
+            valueB = 1;
+          } else if (a.sentToBusinessOffice && b.sentToBusinessOffice) {
+            valueA = new Date(a.sentToBusinessOffice.toDate()).getTime();
+            valueB = new Date(b.sentToBusinessOffice.toDate()).getTime();
+          } else {
+            valueA = valueB = 0;
+          }
+          break;
+          
+        default:
+          valueA = a[sortField];
+          valueB = b[sortField];
+      }
+      
+      // Perform the comparison
+      if (valueA === valueB) return 0;
+      
+      const comparison = valueA > valueB ? 1 : -1;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  // Finally define filterDeals and use it
+  const filterDeals = () => {
+    let result = deals;
+    
+    // Apply search filtering
+    if (searchTerm.trim()) {
+      result = result.filter(deal => {
+        const customerName = typeof deal.customer === 'object' ? deal.customer.name : deal.customer;
+        const customerMatch = customerName && customerName.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const vehicleMatch = deal.vehicle && (
+          (deal.vehicle.year && deal.vehicle.year.toString().includes(searchTerm)) ||
+          (deal.vehicle.model && deal.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (deal.vehicle.vin && deal.vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+        
+        return customerMatch || vehicleMatch;
+      });
+    }
+    
+    // Apply sorting
+    return getSortedDeals(result);
+  };
+
+  const filteredDeals = filterDeals();
 
   const handleRefreshClick = () => {
     setRefreshKey(prevKey => prevKey + 1);
@@ -557,20 +641,45 @@ function Deals() {
           <table className="deals-table">
             <thead>
               <tr>
-                <th>Customer</th>
-                <th>Vehicle</th>
-                <th>Date Sold</th>
-                <th>Lender</th>
-                <th>Total Profit</th>
-                <th>Funding Status</th>
-                <th>Sent to Business Office</th>
+                <th className={sortField === 'customer' ? `sorted-${sortDirection}` : ''} onClick={() => handleSort('customer')}>
+                  Customer
+                  {sortField === 'customer' && <span className="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </th>
+                <th className={sortField === 'vehicle' ? `sorted-${sortDirection}` : ''} onClick={() => handleSort('vehicle')}>
+                  Vehicle
+                  {sortField === 'vehicle' && <span className="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </th>
+                <th className={sortField === 'dateSold' ? `sorted-${sortDirection}` : ''} onClick={() => handleSort('dateSold')}>
+                  Date Sold
+                  {sortField === 'dateSold' && <span className="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </th>
+                <th className={sortField === 'lender' ? `sorted-${sortDirection}` : ''} onClick={() => handleSort('lender')}>
+                  Lender
+                  {sortField === 'lender' && <span className="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </th>
+                <th className={sortField === 'profit' ? `sorted-${sortDirection}` : ''} onClick={() => handleSort('profit')}>
+                  Total Profit
+                  {sortField === 'profit' && <span className="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </th>
+                <th className={sortField === 'fundingStatus' ? `sorted-${sortDirection}` : ''} onClick={() => handleSort('fundingStatus')}>
+                  Funding Status
+                  {sortField === 'fundingStatus' && <span className="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </th>
+                <th className={sortField === 'sentToBO' ? `sorted-${sortDirection}` : ''} onClick={() => handleSort('sentToBO')}>
+                  Sent to Business Office
+                  {sortField === 'sentToBO' && <span className="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredDeals.map(deal => (
-                <tr key={deal.id} className={getFundingStatusClass(deal)}>
-                  <td className="customer-cell">{deal.customer}</td>
+                <tr key={deal.id} className={`${getFundingStatusClass(deal)} ${deal.isBullet ? 'bullet-deal' : ''} ${deal.houseDeal ? 'house-deal' : ''}`}>
+                  <td className="customer-cell">
+                    {deal.customer}
+                    {deal.isBullet && <span className="bullet-indicator" title="Bullet Deal">🔴</span>}
+                    {deal.houseDeal && <span className="house-indicator" title="House Deal">🏠</span>}
+                  </td>
                   <td>{formatVehicleSimple(deal.vehicle)}</td>
                   <td>{formatDate(deal.dateSold || deal.date)}</td>
                   <td className="lender-cell">{deal.lenderName || deal.lenderId}</td>

@@ -60,6 +60,8 @@ function NewDeal() {
   const [loanTerm, setLoanTerm] = useState('');
   const [useManualReserve, setUseManualReserve] = useState(false);
   const [manualReserveAmount, setManualReserveAmount] = useState('');
+  const [isBullet, setIsBullet] = useState(false);
+  const [houseDeal, setHouseDeal] = useState(false);
   
   useEffect(() => {
     const fetchLenders = async () => {
@@ -222,6 +224,8 @@ function NewDeal() {
         dateSold: dateSold ? new Date(dateSold) : new Date(),
         lenderId: selectedLender,
         lenderName: lenders.find(l => l.id === selectedLender)?.name || '',
+        isBullet: isBullet,
+        houseDeal: houseDeal,
         
         // Finance information
         buyRate: parseFloat(buyRate) || 0,
@@ -516,6 +520,30 @@ function NewDeal() {
                 <span className="label">Total Profit:</span>
                 <span className="value">${calculateTotalProfit().toFixed(2)}</span>
               </div>
+              
+              <div className="deal-types-container">
+                <div className="form-group bullet-checkbox-simple">
+                  <label className="bullet-label">
+                    <input
+                      type="checkbox"
+                      checked={isBullet}
+                      onChange={(e) => setIsBullet(e.target.checked)}
+                    />
+                    <span>Bullet</span>
+                  </label>
+                </div>
+                
+                <div className="form-group house-deal-checkbox">
+                  <label className="house-deal-label">
+                    <input
+                      type="checkbox"
+                      checked={houseDeal}
+                      onChange={(e) => setHouseDeal(e.target.checked)}
+                    />
+                    <span>House Deal</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -525,7 +553,7 @@ function NewDeal() {
               <table>
                 <thead>
                   <tr>
-                    <th>Select</th>
+                    <th style={{ width: '60px' }}>Select</th>
                     <th>Product</th>
                     <th>Sold Price ($)</th>
                     <th>Cost ($)</th>
@@ -571,7 +599,9 @@ function NewDeal() {
                         />
                       </td>
                       <td className="profit-column">
-                        ${productData[product.id].selected ? calculateProductProfit(product.id).toFixed(2) : '0.00'}
+                        ${productData[product.id].selected ? 
+                          calculateProductProfit(product.id).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : 
+                          '0.00'}
                       </td>
                     </tr>
                   ))}
@@ -579,9 +609,9 @@ function NewDeal() {
                 <tfoot>
                   <tr>
                     <td colSpan="2"><strong>Totals</strong></td>
-                    <td><strong>${calculateTotalProductsRevenue().toFixed(2)}</strong></td>
+                    <td><strong>${calculateTotalProductsRevenue().toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong></td>
                     <td></td>
-                    <td><strong>${calculateTotalProductsProfit().toFixed(2)}</strong></td>
+                    <td><strong>${calculateTotalProductsProfit().toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</strong></td>
                   </tr>
                 </tfoot>
               </table>
