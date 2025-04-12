@@ -62,17 +62,21 @@ function Deals() {
         
         if (data.userId === currentUser.uid) {
           // Calculate funding status and days passed
-          let fundingStatus = 'Not Sent';
-          let daysSinceSent = 0;
+          let fundingStatus = data.fundedDate ? 'Funded' : 'Not Funded';
+          let daysSinceSold = 0;
           
-          if (data.sentToBusinessOffice && data.sentToBusinessOffice.toDate) {
+          // Get date sold from various possible fields, prioritizing dateSold
+          const dateSoldTimestamp = data.dateSold || data.date || data.createdAt;
+          if (dateSoldTimestamp && dateSoldTimestamp.toDate) {
+            const soldDate = dateSoldTimestamp.toDate();
+            daysSinceSold = differenceInDays(new Date(), soldDate);
+          }
+          
+          // Calculate business office days
+          let daysSinceSentToBO = null;
+          if (data.sentToBusinessOffice && !data.fundedDate) {
             const sentDate = data.sentToBusinessOffice.toDate();
-            fundingStatus = 'Sent to Business Office';
-            daysSinceSent = differenceInDays(new Date(), sentDate);
-            
-            if (data.fundedDate) {
-              fundingStatus = 'Funded';
-            }
+            daysSinceSentToBO = differenceInDays(new Date(), sentDate);
           }
           
           const dealData = {
@@ -89,10 +93,9 @@ function Deals() {
             backEndProfit: data.backEndProfit || data.profit || 0,
             sentToBusinessOffice: data.sentToBusinessOffice || null,
             fundedDate: data.fundedDate || null,
-            fundingStatus: data.fundedDate ? 'Funded' : 
-                          data.sentToBusinessOffice ? 'Sent to Business Office' : 
-                          'Not Sent',
-            daysSinceSent: daysSinceSent,
+            fundingStatus: fundingStatus,
+            daysSinceSold: daysSinceSold,
+            daysSinceSentToBO: daysSinceSentToBO,
             _fetchTime: Date.now(),
             ...data
           };
@@ -140,14 +143,21 @@ function Deals() {
             if (dealIndex !== -1) {
               const data = docSnapshot.data();
               // Calculate the status from the data, not rely on stored status
-              const fundingStatus = data.fundedDate ? 'Funded' : 
-                                   data.sentToBusinessOffice ? 'Sent to Business Office' : 
-                                   'Not Sent';
+              const fundingStatus = data.fundedDate ? 'Funded' : 'Not Funded';
                                    
-              let daysSinceSent = 0;
+              let daysSinceSold = 0;
+              // Get date sold from various possible fields, prioritizing dateSold
+              const dateSoldTimestamp = data.dateSold || data.date || data.createdAt;
+              if (dateSoldTimestamp && dateSoldTimestamp.toDate) {
+                const soldDate = dateSoldTimestamp.toDate();
+                daysSinceSold = differenceInDays(new Date(), soldDate);
+              }
+              
+              // Calculate business office days
+              let daysSinceSentToBO = null;
               if (data.sentToBusinessOffice && !data.fundedDate) {
                 const sentDate = data.sentToBusinessOffice.toDate();
-                daysSinceSent = differenceInDays(new Date(), sentDate);
+                daysSinceSentToBO = differenceInDays(new Date(), sentDate);
               }
               
               updatedDeals[dealIndex] = {
@@ -165,7 +175,8 @@ function Deals() {
                 sentToBusinessOffice: data.sentToBusinessOffice || null,
                 fundedDate: data.fundedDate || null,
                 fundingStatus: fundingStatus,
-                daysSinceSent: daysSinceSent,
+                daysSinceSold: daysSinceSold,
+                daysSinceSentToBO: daysSinceSentToBO,
                 _fetchTime: Date.now(),
                 ...data
               };
@@ -454,26 +465,42 @@ function Deals() {
       return 'funded';
     }
     
-    // Continue with the existing logic for non-funded deals
-    if (deal.fundingStatus === 'Sent to Business Office' || 
-        (deal.sentToBusinessOffice && !deal.fundedDate)) {
-      // Calculate days since sent using the actual timestamp
-      let daysSinceSent = 0;
-      if (deal.sentToBusinessOffice && deal.sentToBusinessOffice.toDate) {
-        const sentDate = deal.sentToBusinessOffice.toDate();
-        daysSinceSent = differenceInDays(new Date(), sentDate);
-      } else if (deal.daysSinceSent) {
-        daysSinceSent = deal.daysSinceSent;
-      }
+    // Primary warning is based on days since sold (funding compliance)
+    const daysSinceSold = deal.daysSinceSold || 0;
+    
+    // Check for critical funding delays
+    if (daysSinceSold >= 10) {
+      return 'critical-delay';
+    } 
+    
+    // Check for business office delays only if it's been sent
+    if (deal.sentToBusinessOffice) {
+      const boDelay = differenceInDays(new Date(), deal.sentToBusinessOffice.toDate());
       
-      if (daysSinceSent >= 10) {
-        return 'critical-delay';
-      } else if (daysSinceSent >= 5) {
-        return 'warning-delay';
+      // If it's been sitting in the business office for 3+ days, show a warning
+      if (boDelay >= 3) {
+        return 'bo-warning-delay';
       }
     }
     
+    // Standard funding warning at 5 days
+    if (daysSinceSold >= 5) {
+      return 'warning-delay';
+    }
+    
     return '';
+  };
+
+  const getDaysSinceBusinessOffice = (deal) => {
+    if (!deal.sentToBusinessOffice || deal.fundedDate) return null;
+    
+    try {
+      const sentDate = deal.sentToBusinessOffice.toDate();
+      return differenceInDays(new Date(), sentDate);
+    } catch (e) {
+      console.error("Error calculating business office days:", e);
+      return null;
+    }
   };
 
   // Return null when data is loading - let the global spinner handle it
@@ -532,10 +559,11 @@ function Deals() {
               <tr>
                 <th>Customer</th>
                 <th>Vehicle</th>
-                <th>Date</th>
+                <th>Date Sold</th>
                 <th>Lender</th>
                 <th>Total Profit</th>
                 <th>Funding Status</th>
+                <th>Sent to Business Office</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -551,11 +579,24 @@ function Deals() {
                   </td>
                   <td className="funding-status-cell">
                     {deal.fundingStatus}
-                    {deal.fundingStatus === 'Sent to Business Office' && !deal.fundedDate && (
+                    {!deal.fundedDate && (
                       <span className="days-since">
-                        ({deal.daysSinceSent} days)
+                        ({deal.daysSinceSold} days)
                       </span>
                     )}
+                  </td>
+                  <td className="business-office-cell">
+                    {deal.sentToBusinessOffice ? 
+                      <>
+                        <span className="bo-status"></span> {formatDate(deal.sentToBusinessOffice)}
+                        {!deal.fundedDate && deal.sentToBusinessOffice && (
+                          <span className="days-since">
+                            ({differenceInDays(new Date(), deal.sentToBusinessOffice.toDate())} days)
+                          </span>
+                        )}
+                      </> : 
+                      <span className="bo-status not-sent">Not Sent</span>
+                    }
                   </td>
                   <td className="actions-cell">
                     <div className="actions-container">

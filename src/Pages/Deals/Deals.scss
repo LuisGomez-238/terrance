@@ -183,6 +183,33 @@ $funded-hover-color: rgba(40, 167, 69, 0.2); // Slightly darker green for hover 
         }
       }
       
+      .business-office-cell {
+        position: relative;
+        
+        .bo-status {
+          display: block;
+          font-weight: 500;
+          color: #4a90e2; // Blue color for visual distinction
+          
+          &.not-sent {
+            color: #999; // Gray for not sent
+            font-weight: normal;
+          }
+        }
+        
+        .bo-date {
+          display: block;
+          margin-top: 3px;
+        }
+        
+        .days-since {
+          display: block;
+          font-size: 0.8rem;
+          color: #666;
+          margin-top: 2px;
+        }
+      }
+      
       .actions-cell {
         text-align: center;
         width: 60px;
@@ -264,6 +291,27 @@ $funded-hover-color: rgba(40, 167, 69, 0.2); // Slightly darker green for hover 
         .funding-status-cell {
           color: $funded-color;
           font-weight: 500;
+        }
+      }
+      
+      tr.bo-warning-delay {
+        background-color: rgba(230, 126, 34, 0.1);
+        
+        &:hover {
+          background-color: rgba(230, 126, 34, 0.2);
+        }
+        
+        td.business-office-cell {
+          .days-since {
+            color: #e67e22;
+            font-weight: 600;
+          }
+        }
+      }
+      
+      th, td {
+        &:nth-child(7) { // This is the Business Office column
+          width: 160px; // Increase width to accommodate the longer text
         }
       }
     }
