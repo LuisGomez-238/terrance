@@ -217,7 +217,6 @@ $shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
       &:hover {
         background-color: $primary-dark;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba($primary-color, 0.3);
       }
       
       &:active {
@@ -1060,3 +1059,393 @@ $shadow-color: rgba(0, 0, 0, 0.1); // Shadow color
   }
 }
 
+// Add these styles to your existing Lenders.scss file
+
+// Documents button styling update
+.documents-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  
+  .material-icons {
+    font-size: 1.1rem;
+    margin-right: 0.35rem;
+  }
+  
+  &:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+    transform: translateY(-1px);
+  }
+}
+
+// Documents modal specific styles
+.documents-modal {
+  width: 90%;
+  max-width: 1200px;
+  height: 90vh;
+  max-height: 800px;
+  
+  .modal-body {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 140px); // Adjust for header and footer
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .documents-list-container {
+    display: flex;
+    height: 100%;
+    
+    .documents-list {
+      width: 40%;
+      min-width: 350px;
+      overflow-y: auto;
+      border-right: 1px solid #e5e7eb;
+      padding: 1rem;
+    }
+    
+    .document-preview-section {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+  
+  .document-card {
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    
+    &:hover {
+      background-color: #f9fafb;
+      transform: translateY(-2px);
+    }
+    
+    &.selected {
+      background-color: #f0f7ff;
+      border-color: #a5d8ff;
+    }
+  }
+}
+
+.modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+  
+  .loading-icon {
+    font-size: 2.5rem;
+    color: #3b82f6;
+    animation: spin 2s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  p {
+    margin-top: 1rem;
+    color: #6b7280;
+  }
+}
+
+// No documents message
+.no-documents {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+  text-align: center;
+  
+  .material-icons {
+    font-size: 3rem;
+    color: #9ca3af;
+    margin-bottom: 1rem;
+  }
+  
+  h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin: 0 0 0.5rem;
+  }
+  
+  p {
+    color: #6b7280;
+    margin: 0 0 1.5rem;
+  }
+  
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    background-color: $primary-color;
+    color: white;
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background-color: $primary-dark;
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// Documents list
+.documents-list {
+  .documents-count {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+  
+  .documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .document-card {
+    display: flex;
+    align-items: center;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+    border: 1px solid #e5e7eb;
+    
+    &:hover {
+      background-color: #f3f4f6;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .document-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      background-color: #e0e7ff;
+      color: #4f46e5;
+      margin-right: 1rem;
+      flex-shrink: 0;
+      
+      .material-icons {
+        font-size: 1.5rem;
+      }
+      
+      &:has(.material-icons:contains('picture_as_pdf')) {
+        background-color: #fee2e2;
+        color: #dc2626;
+      }
+      
+      &:has(.material-icons:contains('article')) {
+        background-color: #e0f2fe;
+        color: #0ea5e9;
+      }
+    }
+    
+    .document-info {
+      flex: 1;
+      min-width: 0;
+      padding-right: 0.5rem;
+      
+      .document-name {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #1f2937;
+        margin: 0 0 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .document-meta {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.25rem;
+        
+        .document-type {
+          font-size: 0.8rem;
+          color: #6b7280;
+          background-color: #f3f4f6;
+          padding: 0.2rem 0.5rem;
+          border-radius: 4px;
+          margin-right: 0.5rem;
+        }
+        
+        .document-date {
+          font-size: 0.8rem;
+          color: #6b7280;
+        }
+      }
+      
+      .document-status {
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        
+        &.processed {
+          color: #059669;
+        }
+        
+        &.pending {
+          color: #f59e0b;
+        }
+        
+        .vector-badge {
+          display: inline-flex;
+          align-items: center;
+          margin-left: 0.5rem;
+          
+          .material-icons {
+            font-size: 1rem;
+            color: #8b5cf6;
+          }
+        }
+      }
+    }
+    
+    .document-actions {
+      display: flex;
+      gap: 0.5rem;
+      
+      .view-btn,
+      .test-terrance-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        .material-icons {
+          font-size: 1.1rem;
+        }
+      }
+      
+      .view-btn {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        
+        &:hover {
+          background-color: rgba(59, 130, 246, 0.2);
+        }
+      }
+      
+      .test-terrance-btn {
+        background-color: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+        
+        &:hover {
+          background-color: rgba(139, 92, 246, 0.2);
+        }
+      }
+    }
+  }
+}
+
+// Fix for documents button in table view
+.lenders-table .documents-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+    transform: translateY(-1px);
+  }
+}
+
+// Add this to your document-meta styles
+.document-source {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.5rem;
+  
+  .material-icons {
+    font-size: 1rem;
+    color: #10b981; // Green color for verified
+  }
+}
+
+// Vector store fix button
+.vector-fix-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background-color: #8b5cf6; // Purple color for technical actions
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  .material-icons {
+    font-size: 1.1rem;
+  }
+  
+  &:hover {
+    background-color: #7c3aed;
+    transform: translateY(-1px);
+  }
+}
+
+// Success message styling
+.success-message {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  
+  &::before {
+    content: "check_circle";
+    font-family: 'Material Icons';
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+  }
+}

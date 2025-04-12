@@ -1,274 +1,203 @@
 .ai-assistant-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 70px); // Adjust based on your header height
-  background-color: #f5f7fa;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 0;
-  margin: 0;
-  overflow: hidden;
-}
-
-.ai-assistant-header {
-  padding: 16px 20px;
-  background-color: #1a2a3a;
-  color: white;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  display: flex;
-  align-items: center;
-  border-bottom: 2px solid #e42824; // Kia red
-  
-  h1 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 600;
-    flex: 1;
-  }
-  
-  .assistant-title {
-    font-size: 0.9rem;
-    color: #bbbbbb;
-    font-weight: 400;
-    margin-left: 8px;
-  }
-}
-
-.messages-container {
-  flex: 1;
-  overflow-y: auto;
+  height: 100%;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-  }
-  
-  &::-webkit-scrollbar-thumb:hover {
-    background: #a0a0a0;
-  }
-}
 
-.message {
-  max-width: 85%;
-  padding: 12px 16px;
-  border-radius: 8px;
-  position: relative;
-  
-  .message-sender {
-    font-size: 0.75rem;
-    margin-bottom: 5px;
-    font-weight: 600;
-  }
-  
-  .message-content {
-    font-size: 0.95rem;
-    line-height: 1.4;
-  }
-  
-  &.ai-message {
-    align-self: flex-start;
-    background-color: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    border-left: 3px solid #e42824; // Kia red
+  .ai-assistant-header {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
     
-    .message-sender {
-      color: #e42824; // Kia red
+    h1 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    p {
+      color: #666;
+    }
+    
+    .header-controls {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+      
+      .refresh-button {
+        padding: 6px 12px;
+        background-color: #f0f4f8;
+        color: #3b82f6;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        &:hover:not(:disabled) {
+          background-color: #e0e7ff;
+          border-color: #3b82f6;
+        }
+        
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
     }
   }
-  
-  &.user-message {
-    align-self: flex-end;
-    background-color: #1a2a3a;
-    color: white;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    
-    .message-sender {
-      color: #bbbbbb;
-    }
-  }
-}
 
-.input-container {
-  padding: 16px;
-  border-top: 1px solid #dcdfe4;
-  background-color: #ffffff;
-  display: flex;
-  gap: 12px;
-  
-  textarea {
+  .chat-container {
+    display: flex;
+    flex-direction: column;
     flex: 1;
-    border: 1px solid #dcdfe4;
-    border-radius: 6px;
-    padding: 12px;
-    resize: none;
-    font-size: 0.95rem;
-    font-family: inherit;
-    
-    &:focus {
-      outline: none;
-      border-color: #e42824; // Kia red when focused
-      box-shadow: 0 0 0 2px rgba(228, 40, 36, 0.2);
-    }
-    
-    &::placeholder {
-      color: #aaaaaa;
-    }
-    
-    &:disabled {
-      background-color: #f5f5f5;
-      cursor: not-allowed;
-    }
+    background-color: #f9fafb;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
-  
-  button {
-    background-color: #e42824; // Kia red
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 0 20px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    
-    &:hover {
-      background-color: #cc241f;
-    }
-    
-    &:disabled {
-      background-color: #e48a88;
-      cursor: not-allowed;
-    }
-  }
-}
 
-.ai-assistant-footer {
-  padding: 12px 16px;
-  background-color: #ffffff;
-  border-top: 1px solid #dcdfe4;
-  
-  .assistant-info {
-    color: #666666;
-    font-size: 0.8rem;
-    margin: 0;
-    text-align: center;
+  .messages-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
-}
 
-.typing-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  
-  span {
-    width: 8px;
-    height: 8px;
-    background-color: #e42824; // Kia red
-    border-radius: 50%;
-    opacity: 0.6;
-    animation: typing-animation 1.5s infinite ease-in-out;
+  .welcome-message {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin: auto;
+    max-width: 600px;
     
-    &:nth-child(1) {
-      animation-delay: 0s;
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
     }
     
-    &:nth-child(2) {
-      animation-delay: 0.2s;
+    ul {
+      margin-top: 12px;
+      padding-left: 20px;
+      
+      li {
+        margin-bottom: 8px;
+      }
     }
-    
-    &:nth-child(3) {
-      animation-delay: 0.4s;
-    }
   }
-}
 
-@keyframes typing-animation {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.6;
-  }
-  
-  30% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
-}
-
-.error-message {
-  margin: 10px;
-  padding: 12px 16px;
-  background-color: #fff1f0;
-  border: 1px solid #ffccc7;
-  border-radius: 6px;
-  color: #cf1322;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.no-data-message {
-  text-align: center;
-  color: #888;
-  margin: 30px 0;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  border: 1px dashed #ddd;
-  
-  p {
-    margin: 0;
-  }
-}
-
-/* Media queries for responsiveness */
-@media (max-width: 768px) {
   .message {
-    max-width: 95%;
-  }
-  
-  .ai-assistant-header h1 {
-    font-size: 1.2rem;
-  }
-  
-  .input-container {
-    padding: 12px;
+    display: flex;
+    max-width: 80%;
     
-    textarea {
-      padding: 10px;
+    .message-content {
+      padding: 12px 16px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+  }
+
+  .user-message {
+    align-self: flex-end;
+    
+    .message-content {
+      background-color: #3b82f6;
+      color: white;
+    }
+  }
+
+  .assistant-message {
+    align-self: flex-start;
+    
+    .message-content {
+      background-color: white;
+      border: 1px solid #e5e7eb;
+    }
+  }
+
+  .loading {
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      
+      span {
+        height: 8px;
+        width: 8px;
+        border-radius: 50%;
+        background-color: #999;
+        margin: 0 2px;
+        animation: bounce 1.5s infinite ease-in-out;
+        
+        &:nth-child(1) {
+          animation-delay: 0s;
+        }
+        
+        &:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+        
+        &:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+      }
+    }
+  }
+
+  .chat-input-form {
+    display: flex;
+    padding: 12px;
+    background-color: white;
+    border-top: 1px solid #e5e7eb;
+    
+    input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-right: 12px;
+      font-size: 14px;
+      
+      &:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+      
+      &:disabled {
+        background-color: #f9fafb;
+      }
     }
     
     button {
-      padding: 0 15px;
+      padding: 12px 24px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      
+      &:hover:not(:disabled) {
+        background-color: #2563eb;
+      }
+      
+      &:disabled {
+        background-color: #93c5fd;
+        cursor: not-allowed;
+      }
     }
   }
 }
 
-@media (max-width: 480px) {
-  .messages-container {
-    padding: 12px;
+@keyframes bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
   }
-  
-  .message {
-    padding: 10px 12px;
-    
-    .message-content {
-      font-size: 0.9rem;
-    }
+  30% {
+    transform: translateY(-4px);
   }
-  
-  .ai-assistant-footer .assistant-info {
-    font-size: 0.75rem;
-  }
-}
+} 

@@ -20,7 +20,7 @@ function Sidebar() {
       title: "Analysis",
       items: [
         { path: '/reports', label: 'Reports & Analytics', icon: 'bar_chart' },
-        { path: '/ai-assistant', label: 'Terrance', icon: 'smart_toy', badge: 'New' },
+        { path: '/ai-assistant', label: 'Terrance', icon: 'smart_toy' },
       ]
     }
   ];

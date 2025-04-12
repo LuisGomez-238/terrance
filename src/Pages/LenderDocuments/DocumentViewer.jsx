@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, getDownloadURL, listAll } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import { useLoading } from '../../contexts/LoadingContext';
@@ -20,6 +20,8 @@ function DocumentViewer() {
   const [editingKeyPoint, setEditingKeyPoint] = useState(null);
   const [editingKeyPointIndex, setEditingKeyPointIndex] = useState(null);
   const [newKeyPoint, setNewKeyPoint] = useState('');
+  const [fallbackUrl, setFallbackUrl] = useState(null);
+  const [isLoadingFallback, setIsLoadingFallback] = useState(false);
   
   // Document type mapping
   const documentTypes = {
@@ -179,6 +181,111 @@ function DocumentViewer() {
       setError("Failed to delete key point");
     }
   };
+  
+  useEffect(() => {
+    if (!document.storageUrl && document.fileName.toLowerCase().endsWith('.pdf')) {
+      const fetchFallbackUrl = async () => {
+        setIsLoadingFallback(true);
+        try {
+          const userId = currentUser.uid;
+          const lenderId = lender?.id;
+          
+          // Try to fetch the document directly from Firestore first to see if it has a storageUrl
+          if (document.id && document.source === 'user_collection') {
+            try {
+              const docRef = doc(db, 'userConfig', userId, 'lenderDocuments', document.id);
+              const docSnap = await getDoc(docRef);
+              
+              if (docSnap.exists() && docSnap.data().storageUrl) {
+                console.log("Found storage URL in Firestore document:", docSnap.data().storageUrl);
+                setFallbackUrl(docSnap.data().storageUrl);
+                setIsLoadingFallback(false);
+                return;
+              }
+            } catch (firestoreError) {
+              console.warn("Error checking Firestore for storage URL:", firestoreError);
+            }
+          }
+          
+          // If we don't have a direct URL, try to find matching files in storage
+          const baseDir = `lender_docs/${userId}`;
+          
+          try {
+            // List all files in the directory
+            const dirRef = ref(storage, baseDir);
+            const result = await listAll(dirRef);
+            const fileList = result.items.map(item => item.name);
+            console.log("Available files in directory:", fileList);
+            
+            // Look for files that match the lender ID and either the OpenAI file ID or the original filename
+            const matchingFiles = fileList.filter(filename => 
+              filename.includes(lenderId) && 
+              (document.openaiFileId && filename.includes(document.openaiFileId) || 
+               filename.includes(document.fileName.replace(/\s+/g, '_')))
+            );
+            
+            // If no direct match, try just by lender ID
+            if (matchingFiles.length === 0) {
+              const lenderFiles = fileList.filter(filename => filename.startsWith(lenderId + '_'));
+              
+              if (lenderFiles.length > 0) {
+                // Try to find the most recently uploaded file (assuming timestamp-based naming)
+                const sortedFiles = lenderFiles.sort().reverse();
+                const fileRef = ref(storage, `${baseDir}/${sortedFiles[0]}`);
+                const url = await getDownloadURL(fileRef);
+                console.log(`Found matching file by lender ID: ${sortedFiles[0]}`);
+                setFallbackUrl(url);
+                
+                // Important: Update the Firestore document with this URL for future reference
+                if (document.id && document.source === 'user_collection') {
+                  try {
+                    const docRef = doc(db, 'userConfig', userId, 'lenderDocuments', document.id);
+                    await updateDoc(docRef, {
+                      storageUrl: url,
+                      storageFilePath: `${baseDir}/${sortedFiles[0]}`
+                    });
+                    console.log("Updated Firestore document with storage URL");
+                  } catch (updateError) {
+                    console.warn("Error updating Firestore document:", updateError);
+                  }
+                }
+                return;
+              }
+            } else {
+              // We found a direct match
+              const fileRef = ref(storage, `${baseDir}/${matchingFiles[0]}`);
+              const url = await getDownloadURL(fileRef);
+              console.log(`Found directly matching file: ${matchingFiles[0]}`);
+              setFallbackUrl(url);
+              
+              // Update Firestore with this URL
+              if (document.id && document.source === 'user_collection') {
+                try {
+                  const docRef = doc(db, 'userConfig', userId, 'lenderDocuments', document.id);
+                  await updateDoc(docRef, {
+                    storageUrl: url,
+                    storageFilePath: `${baseDir}/${matchingFiles[0]}`
+                  });
+                  console.log("Updated Firestore document with storage URL");
+                } catch (updateError) {
+                  console.warn("Error updating Firestore document:", updateError);
+                }
+              }
+              return;
+            }
+          } catch (listError) {
+            console.warn("Could not list files in directory:", listError);
+          }
+        } catch (err) {
+          console.warn(`Error finding fallback URL: ${err.message}`);
+        } finally {
+          setIsLoadingFallback(false);
+        }
+      };
+      
+      fetchFallbackUrl();
+    }
+  }, [document, lender, currentUser.uid]);
   
   if (error) {
     return (
