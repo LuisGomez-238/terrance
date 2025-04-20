@@ -1,0 +1,57 @@
+.sales-manager-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  
+  // Make header take full width
+  header {
+    width: 100%;
+    z-index: 1010; // Higher than sidebar
+  }
+  
+  // Wrapper for sidebar and content
+  .main-content-wrapper {
+    display: flex;
+    flex: 1;
+    position: relative;
+  }
+  
+  // Adjust sidebar positioning
+  .sales-manager-nav {
+    position: fixed;
+    top: 64px; // Adjust based on your header height
+    left: 0;
+    height: calc(100vh - 64px); // Adjust based on header height
+  }
+  
+  .sales-manager-container {
+    flex: 1;
+    margin-left: 240px; // Match the expanded width of your SalesManagerNav
+    width: calc(100vw - 240px); // Ensure the container takes full remaining width
+    transition: margin-left 0.3s ease, width 0.3s ease;
+    
+    .sales-manager-content {
+      padding: 1.5rem;
+      background-color: #f8f9fa;
+      min-height: calc(100vh - 64px - 60px); // Adjust based on header and footer heights
+      width: 100%; // Take up full width of container
+      overflow-x: hidden; // Prevent horizontal scrolling
+    }
+  }
+  
+  // When nav is collapsed, adjust the container margins and width
+  &.nav-collapsed {
+    .sales-manager-container {
+      margin-left: 60px; // Match the collapsed width of nav
+      width: calc(100vw - 60px); // Adjust width calculation
+    }
+  }
+  
+  // Ensure footer is full width and at the bottom
+  footer {
+    width: 100%;
+    z-index: 1000;
+    margin-top: auto; // Push to bottom if content doesn't fill the page
+  }
+}

@@ -1,0 +1,146 @@
+$primary-color: #BB162B; // Kia Red
+$primary-dark: #8E0F21; // Darker red for hover states
+$secondary-color: #000000; // Kia Black
+$dark-text: #333333; // Dark gray for text
+$light-text: #666666; // Light gray for secondary text
+
+.sales-manager-nav {
+  background-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 240px;
+  position: fixed;
+  left: 0;
+  top: 64px; // Account for header height
+  transition: width 0.3s ease;
+  z-index: 1000;
+  
+  &.collapsed {
+    width: 60px;
+    
+    .nav-links li a,
+    .nav-links li button {
+      justify-content: center;
+      padding: 0.75rem;
+    }
+    
+    .user-info {
+      justify-content: center;
+      padding: 1rem 0;
+    }
+    
+    .link-text {
+      display: none;
+    }
+  }
+  
+  .nav-brand {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-bottom: 1px solid #f1f1f1;
+    
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: $primary-color;
+    }
+    
+    .role-badge {
+      background-color: $primary-color;
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      text-transform: uppercase;
+    }
+  }
+  
+  .nav-links {
+    list-style-type: none;
+    padding: 0;
+    margin: 1.5rem 0;
+    
+    li {
+      a, button {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        color: $dark-text;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        
+        .material-icons {
+          margin-right: 0.75rem;
+          font-size: 1.2rem;
+        }
+        
+        .link-text {
+          white-space: nowrap;
+        }
+        
+        &:hover {
+          background-color: #f8f9fa;
+          color: $primary-color;
+        }
+      }
+      
+      &.active a {
+        background-color: #f8f9fa;
+        color: $primary-color;
+        border-left: 3px solid $primary-color;
+      }
+      
+      &.collapse-toggle-item {
+        margin-top: 1rem;
+        border-top: 1px solid #f1f1f1;
+        padding-top: 0.5rem;
+        
+        button {
+          color: $light-text;
+          
+          &:hover {
+            color: $primary-color;
+          }
+          
+          .material-icons {
+            transition: transform 0.3s ease;
+          }
+        }
+      }
+    }
+  }
+  
+  .user-info {
+    margin-top: auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #f1f1f1;
+    
+    .material-icons {
+      margin-right: 0.5rem;
+      color: $light-text;
+    }
+    
+    .user-name {
+      font-size: 0.9rem;
+      color: $light-text;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}

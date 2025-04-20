@@ -5,7 +5,8 @@ import { auth } from './firebase';
 import React from 'react';
 
 // Layouts
-import AppLayout from './AppLayout';
+import AppLayout from './Layouts/AppLayout';
+import SalesManagerLayout from './Layouts/SalesManagerLayout';
 
 // Pages
 import Login from './Pages/Login/Login';
@@ -20,11 +21,15 @@ import AiAssistant from './Pages/AiAssistant/AiAssistant';
 import Profile from './Pages/Profile/Profile';
 import LenderDocuments from './Pages/LenderDocuments/LenderDocuments';
 import DocumentViewer from './Pages/LenderDocuments/DocumentViewer';
+import Unauthorized from './Components/Unauthorized/Unauthorized';
+import SalesManagerDashboard from './Components/SalesManager/Dashboard';
+import SalesManagerRoute from './Components/SalesManager/SalesManagerRoute';
 
 // Context
 import { AuthProvider } from './AuthContext';
 import { ProfileProvider } from './contexts/ProfileContext';
 import { LoadingProvider } from './contexts/LoadingContext';
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -50,6 +55,7 @@ function App() {
           <Router>
             <Routes>
               <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
               
               <Route path="/" element={user ? <AppLayout /> : <Navigate to="/login" />}>
                 <Route index element={<Dashboard />} />
@@ -64,10 +70,24 @@ function App() {
                 <Route path="lender-documents" element={<LenderDocuments />} />
                 <Route path="lender-documents/:documentId" element={<DocumentViewer />} />
               </Route>
+
+              {/* Sales Manager Routes - Now using SalesManagerLayout */}
+              <Route 
+                element={
+                  <SalesManagerRoute>
+                    <SalesManagerLayout />
+                  </SalesManagerRoute>
+                } 
+              >
+                <Route path="/sales-dashboard" element={<SalesManagerDashboard />} />
+                <Route path="/sales-reports" element={<div>Reports Coming Soon</div>} />
+                <Route path="/funding-status" element={<div>Funding Status Coming Soon</div>} />
+                <Route path="/sales-targets" element={<div>Targets Coming Soon</div>} />
+              </Route>
             </Routes>
           </Router>
       </ProfileProvider>
-    </LoadingProvider>
+      </LoadingProvider>
     </AuthProvider>
   );
 }

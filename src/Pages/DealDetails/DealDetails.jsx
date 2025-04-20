@@ -18,6 +18,8 @@ function DealDetails() {
   const [lenders, setLenders] = useState([]);
   const { showLoading, hideLoading } = useLoading();
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [noteText, setNoteText] = useState('');
   
   const availableProducts = [
     { id: 'theftCode', name: 'Theft Code', value: false },
@@ -425,6 +427,37 @@ function DealDetails() {
     }
   };
   
+  const handleOpenNotesModal = () => {
+    setNoteText(deal.notes || '');
+    setShowNotesModal(true);
+  };
+  
+  const handleSaveNotes = async () => {
+    try {
+      showLoading("Saving note...");
+      const dealRef = doc(db, 'deals', dealId);
+      
+      await updateDoc(dealRef, {
+        notes: noteText,
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log("Note saved successfully");
+      setShowNotesModal(false);
+      
+      setDeal(prevDeal => ({
+        ...prevDeal,
+        notes: noteText,
+        updatedAt: new Date()
+      }));
+    } catch (error) {
+      console.error("Error saving note:", error);
+      setError("Failed to save note");
+    } finally {
+      hideLoading();
+    }
+  };
+  
   if (!dataLoaded && !error) {
     return null;
   }
@@ -482,6 +515,14 @@ function DealDetails() {
             </>
           ) : (
             <>
+              <button 
+                className="notes-btn"
+                onClick={handleOpenNotesModal}
+                title="Add/Edit Notes"
+              >
+                <span className="material-icons">note_add</span>
+                Quick Notes
+              </button>
               <button 
                 className="delete-btn"
                 onClick={handleDelete}
@@ -1249,7 +1290,48 @@ function DealDetails() {
           )}
         </div>
       )}
+      {showNotesModal && (
+        <div className="modal-overlay">
+          <div className="notes-modal">
+            <div className="modal-header">
+              <h3>Notes for {deal.customer.name}</h3>
+              <button 
+                className="close-btn" 
+                onClick={() => setShowNotesModal(false)}
+              >
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="modal-info">
+                Add notes about funding status, calls made, or any other relevant information.
+              </p>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Enter notes here..."
+                rows={8}
+              ></textarea>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="cancel-btn"
+                onClick={() => setShowNotesModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="save-btn"
+                onClick={handleSaveNotes}
+              >
+                Save Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    
   );
 }
 

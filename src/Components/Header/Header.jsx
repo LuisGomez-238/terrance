@@ -6,9 +6,12 @@ import { useLoading } from '../../contexts/LoadingContext';
 
 function Header() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isSalesManager } = useAuth();
   const navigate = useNavigate();
   const { showLoading, hideLoading } = useLoading();
+  
+  // Use the isSalesManager function to determine if user is a Sales Manager
+  const userIsSalesManager = isSalesManager();
   
   async function handleLogout() {
     try {
@@ -26,17 +29,38 @@ function Header() {
     <header className="app-header">
       <div className="header-left">
         <div className="logo">
-          <h1><span>F&I</span> Manager</h1>
+          <h1>
+            {userIsSalesManager ? (
+              <><span>Sales</span> Manager</>
+            ) : (
+              <><span>F&I</span> Manager</>
+            )}
+          </h1>
         </div>
         
-        {/* Optional: Quick nav items */}
+        {/* Quick nav items - different for each role */}
         <div className="quick-nav">
-          <a href="/deals/new" className="nav-item">
-            <span className="item-text">New Deal</span>
-          </a>
-          <a href="/lenders" className="nav-item">
-            <span className="item-text">Lenders</span>
-          </a>
+          {userIsSalesManager ? (
+            // Sales Manager quick links
+            <>
+              <a href="/sales-dashboard" className="nav-item">
+                <span className="item-text">Dashboard</span>
+              </a>
+              <a href="/funding-status" className="nav-item">
+                <span className="item-text">Funding</span>
+              </a>
+            </>
+          ) : (
+            // Finance Manager quick links
+            <>
+              <a href="/deals/new" className="nav-item">
+                <span className="item-text">New Deal</span>
+              </a>
+              <a href="/lenders" className="nav-item">
+                <span className="item-text">Lenders</span>
+              </a>
+            </>
+          )}
         </div>
       </div>
       
@@ -58,6 +82,7 @@ function Header() {
             </div>
             <div className="user-info">
               <span className="user-name">{currentUser?.displayName || 'User'}</span>
+              {userIsSalesManager && <span className="user-role">Sales Manager</span>}
             </div>
             <span className="material-icons chevron-icon">
               expand_more
@@ -67,17 +92,25 @@ function Header() {
           <div className={`profile-dropdown ${showProfileMenu ? 'open' : ''}`}>
             <ul>
               <li>
-                <button onClick={() => navigate('/profile')}>
+                <button onClick={() => navigate(userIsSalesManager ? '/sales-dashboard' : '/profile')}>
                   <span className="material-icons item-icon">person</span>
-                  Profile
+                  {userIsSalesManager ? 'Dashboard' : 'Profile'}
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('/reports')}>
+                <button onClick={() => navigate(userIsSalesManager ? '/sales-reports' : '/reports')}>
                   <span className="material-icons item-icon">bar_chart</span>
                   Reports
                 </button>
               </li>
+              {userIsSalesManager && (
+                <li>
+                  <button onClick={() => navigate('/sales-targets')}>
+                    <span className="material-icons item-icon">track_changes</span>
+                    Targets
+                  </button>
+                </li>
+              )}
               <li className="logout">
                 <button onClick={handleLogout}>
                   <span className="material-icons item-icon">logout</span>

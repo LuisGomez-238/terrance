@@ -3,23 +3,83 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
 import './Login.scss';
 import Footer from '../../Components/Footer/Footer';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebase';
+import { useLoading } from '../../contexts/LoadingContext';
+import { 
+  sendPasswordResetEmail 
+} from 'firebase/auth';
 
 function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [selectedRole, setSelectedRole] = useState('finance_manager'); // Default role
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false); // New state for advanced options
   
   const { login, signup } = useAuth();
   const navigate = useNavigate();
+  const { showLoading, hideLoading } = useLoading();
   
   // Add animation effect when component loads
   useEffect(() => {
     document.querySelector('.login-card').classList.add('animate-in');
   }, []);
+  
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    try {
+      showLoading("Logging in...");
+      
+      // Attempt to sign in
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      // If successful, check user role
+      if (auth.currentUser) {
+        const userDocRef = doc(db, 'users', auth.currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          
+          if (userData.role === 'sales_manager') {
+            navigate('/sales-dashboard');
+          } else {
+            // Default for finance managers
+            navigate('/deals');
+          }
+        } else {
+          // No user document exists, create one with default role
+          console.log("User document doesn't exist, redirecting to default path");
+          navigate('/deals');
+        }
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      
+      // Provide more specific error messages based on the error code
+      if (error.code === 'auth/invalid-credential') {
+        setError('Invalid email or password. Please check your credentials.');
+      } else if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email address.');
+      } else if (error.code === 'auth/wrong-password') {
+        setError('Incorrect password. Please try again.');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Please try again later.');
+      } else {
+        setError('Failed to log in. Please try again later.');
+      }
+    } finally {
+      hideLoading();
+    }
+  };
   
   async function handleSubmit(e) {
     e.preventDefault();
@@ -28,12 +88,42 @@ function Login() {
     
     try {
       if (isLogin) {
-        await login(email, password);
+        // When logging in, we need to check the user's role after authentication
+        const userCredential = await login(email, password);
+        
+        // After successful login, check user role and redirect accordingly
+        const userDocRef = doc(db, 'users', auth.currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          
+          if (userData.role === 'sales_manager') {
+            navigate('/sales-dashboard');
+          } else {
+            // Default for finance managers
+            navigate('/deals');
+          }
+        } else {
+          // No user document exists, create one with default role
+          console.log("User document doesn't exist, redirecting to default path");
+          navigate('/deals');
+        }
       } else {
-        await signup(email, password, displayName);
+        // Creating a new account
+        console.log("Creating new account with role:", selectedRole);
+        
+        await signup(email, password, displayName, selectedRole);
+        
+        // Navigate based on role
+        if (selectedRole === 'sales_manager') {
+          navigate('/sales-dashboard');
+        } else {
+          navigate('/deals');
+        }
       }
-      navigate('/');
     } catch (err) {
+      console.error("Signup/Login error:", err);
       setError(err.message || 'Failed to authenticate');
     } finally {
       setLoading(false);
@@ -46,6 +136,8 @@ function Login() {
     setEmail('');
     setPassword('');
     setDisplayName('');
+    setSelectedRole('finance_manager');
+    setShowAdvancedOptions(false);
     
     // Apply transition effect
     const loginCard = document.querySelector('.login-card');
@@ -144,6 +236,59 @@ function Login() {
               </button>
             </div>
           </div>
+          
+          {/* Advanced options toggle - only shown when creating account */}
+          {!isLogin && (
+            <div className="advanced-options-toggle">
+              <button
+                type="button"
+                className="btn-link advanced-toggle"
+                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#4a90e2',
+                  background: 'none',
+                  border: 'none',
+                  padding: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                {showAdvancedOptions ? 'Hide Advanced Options' : 'Show Advanced Options'}
+                <span className="material-icons" style={{ marginLeft: '4px', fontSize: '18px' }}>
+                  {showAdvancedOptions ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+            </div>
+          )}
+          
+          {/* Role selection dropdown - only shown when creating account and advanced options are shown */}
+          {!isLogin && showAdvancedOptions && (
+            <div className="form-group role-selector-container">
+              <label htmlFor="role">Account Type</label>
+              <div className="input-wrapper">
+                <span className="material-icons input-icon">badge</span>
+                <select
+                  id="role"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="role-select"
+                  style={{
+                    borderColor: '#4a90e2',
+                    background: '#f0f8ff',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <option value="finance_manager">Finance Manager</option>
+                  <option value="sales_manager">Sales Manager</option>
+                </select>
+              </div>
+              <div className="role-selection-info" style={{ marginTop: '4px', color: '#666' }}>
+                <small>Select the appropriate account type for this user.</small>
+              </div>
+            </div>
+          )}
           
           {isLogin && (
             <div className="form-options">

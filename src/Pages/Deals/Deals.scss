@@ -544,30 +544,168 @@ h1 {
   }
 }
 
-// Optional: Add subtle background colors for the different deal types
+// Instead of removing the entire blocks, modify them to remove the background colors
 tr.bullet-deal {
-  // Very subtle background for bullet deals
-  background-color: rgba(231, 76, 60, 0.03);
+  // Remove the background color
+  background-color: transparent;
   
   &:hover {
-    background-color: rgba(231, 76, 60, 0.06);
+    // Keep only the default hover behavior
+    background-color: $table-hover !important;
   }
 }
 
 tr.house-deal {
-  // Very subtle background for house deals
-  background-color: rgba(40, 167, 69, 0.03);
+  // Remove the background color
+  background-color: transparent;
   
   &:hover {
-    background-color: rgba(40, 167, 69, 0.06);
+    // Keep only the default hover behavior
+    background-color: $table-hover !important;
   }
 }
 
-// If a deal is both bullet and house, the bullet style takes precedence
+// If a deal is both bullet and house, still no special background
 tr.bullet-deal.house-deal {
-  background-color: rgba(231, 76, 60, 0.03);
+  background-color: transparent;
   
   &:hover {
-    background-color: rgba(231, 76, 60, 0.06);
+    background-color: $table-hover !important;
+  }
+}
+
+// Updated style that keeps the button color consistent
+tr.has-notes .notes-btn {
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background-color: #28a745; // Green indicator dot
+    border-radius: 50%;
+  }
+}
+
+// Add these styles for the modal
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.notes-modal {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #333;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      &:hover {
+        background-color: #f5f5f5;
+        color: #333;
+      }
+    }
+  }
+  
+  .modal-body {
+    padding: 20px;
+    
+    .modal-info {
+      margin: 0 0 15px 0;
+      color: #666;
+      font-size: 0.95rem;
+    }
+    
+    textarea {
+      width: 100%;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 1rem;
+      resize: vertical;
+      min-height: 120px;
+      
+      &:focus {
+        outline: none;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+      }
+    }
+  }
+  
+  .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    
+    button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    
+    .cancel-btn {
+      background-color: white;
+      color: #666;
+      border: 1px solid #e0e0e0;
+      
+      &:hover {
+        background-color: #f5f5f5;
+      }
+    }
+    
+    .save-btn {
+      background-color: #0d6efd;
+      color: white;
+      
+      &:hover {
+        background-color: #0b5ed7;
+        transform: translateY(-1px);
+      }
+    }
   }
 }

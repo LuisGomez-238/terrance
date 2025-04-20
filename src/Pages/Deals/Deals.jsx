@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { collection, getDocs, query, where, orderBy, limit, getFirestore, getDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, getFirestore, getDoc, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../AuthContext';
 import './Deals.scss';
@@ -19,6 +19,9 @@ function Deals() {
   const [viewedDeals, setViewedDeals] = useState({});
   const [sortField, setSortField] = useState('dateSold'); // Default sort by date sold
   const [sortDirection, setSortDirection] = useState('desc'); // Default newest first
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedDealForNotes, setSelectedDealForNotes] = useState(null);
+  const [noteText, setNoteText] = useState('');
 
   const fetchDeals = useCallback(async () => {
     if (!currentUser) {
@@ -587,6 +590,37 @@ function Deals() {
     }
   };
 
+  // Add this function to handle opening the notes modal
+  const handleOpenNotesModal = (deal) => {
+    setSelectedDealForNotes(deal);
+    setNoteText(deal.notes || '');
+    setShowNotesModal(true);
+  };
+
+  // Add this function to handle saving the notes
+  const handleSaveNotes = async () => {
+    if (!selectedDealForNotes) return;
+    
+    try {
+      showLoading("Saving note...");
+      const dealRef = doc(db, 'deals', selectedDealForNotes.id);
+      
+      await updateDoc(dealRef, {
+        notes: noteText,
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log("Note saved successfully");
+      setShowNotesModal(false);
+      setRefreshKey(prevKey => prevKey + 1);
+    } catch (error) {
+      console.error("Error saving note:", error);
+      setError("Failed to save note");
+    } finally {
+      hideLoading();
+    }
+  };
+
   // Return null when data is loading - let the global spinner handle it
   if (!dataLoaded && !error) {
     return null;
@@ -674,7 +708,11 @@ function Deals() {
             </thead>
             <tbody>
               {filteredDeals.map(deal => (
-                <tr key={deal.id} className={`${getFundingStatusClass(deal)} ${deal.isBullet ? 'bullet-deal' : ''} ${deal.houseDeal ? 'house-deal' : ''}`}>
+                <tr key={deal.id} 
+                    className={`${getFundingStatusClass(deal)} 
+                                ${deal.isBullet ? 'bullet-deal' : ''} 
+                                ${deal.houseDeal ? 'house-deal' : ''} 
+                                ${deal.notes && deal.notes.trim() ? 'has-notes' : ''}`}>
                   <td className="customer-cell">
                     {deal.customer}
                     {deal.isBullet && <span className="bullet-indicator" title="Bullet Deal">🔴</span>}
@@ -710,6 +748,17 @@ function Deals() {
                   <td className="actions-cell">
                     <div className="actions-container">
                       <ViewButton dealId={deal.id} />
+                      
+                      <button 
+                        className="action-btn notes-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenNotesModal(deal);
+                        }}
+                        title="Add/Edit Notes"
+                      >
+                        <span className="material-icons">note_add</span>
+                      </button>
                       
                       {!deal.sentToBusinessOffice && (
                         <button 
@@ -755,6 +804,47 @@ function Deals() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showNotesModal && selectedDealForNotes && (
+        <div className="modal-overlay">
+          <div className="notes-modal">
+            <div className="modal-header">
+              <h3>Funding Notes for {selectedDealForNotes.customer}</h3>
+              <button 
+                className="close-btn" 
+                onClick={() => setShowNotesModal(false)}
+              >
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="modal-info">
+                Add notes about funding status, calls made, or any other relevant information.
+              </p>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Enter funding notes here..."
+                rows={6}
+              ></textarea>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="cancel-btn"
+                onClick={() => setShowNotesModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="save-btn"
+                onClick={handleSaveNotes}
+              >
+                Save Notes
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

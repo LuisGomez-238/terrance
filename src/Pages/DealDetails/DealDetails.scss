@@ -135,6 +135,36 @@ $funded-color: #28a745;
             background-color: $hover-bg;
           }
         }
+        
+        .notes-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background-color: $secondary-color;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          padding: 0.65rem 1rem;
+          font-size: 0.9rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          
+          .material-icons {
+            font-size: 1.2rem;
+          }
+          
+          &:hover:not(:disabled) {
+            background-color: lighten($secondary-color, 15%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba($secondary-color, 0.3);
+          }
+          
+          &:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba($secondary-color, 0.3);
+          }
+        }
       }
     }
     
@@ -928,3 +958,161 @@ $funded-color: #28a745;
   }
   
 }
+
+// Add these styles to your DealDetails.scss file
+.notes-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: $secondary-color;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  .material-icons {
+    font-size: 1.2rem;
+  }
+  
+  &:hover:not(:disabled) {
+    background-color: lighten($secondary-color, 15%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($secondary-color, 0.3);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba($secondary-color, 0.3);
+  }
+}
+
+// Add these modal styles using Kia colors
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.notes-modal {
+  background-color: $card-bg;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px $shadow-color;
+  width: 90%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid $border-color;
+    background-color: $table-header;
+    
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: $dark-text;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      color: $light-text;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      &:hover {
+        background-color: $hover-bg;
+        color: $dark-text;
+      }
+    }
+  }
+  
+  .modal-body {
+    padding: 20px;
+    
+    .modal-info {
+      margin: 0 0 15px 0;
+      color: $light-text;
+      font-size: 0.95rem;
+    }
+    
+    textarea {
+      width: 100%;
+      border: 1px solid $border-color;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 1rem;
+      resize: vertical;
+      min-height: 120px;
+      background-color: $input-bg;
+      
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+      }
+    }
+  }
+  
+  .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid $border-color;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    
+    button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    
+    .cancel-btn {
+      background-color: white;
+      color: $light-text;
+      border: 1px solid $border-color;
+      
+      &:hover {
+        background-color: $hover-bg;
+      }
+    }
+    
+    .save-btn {
+      background-color: $primary-color;
+      color: white;
+      
+      &:hover {
+        background-color: $primary-dark;
+        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+      }
+    }
+  }
+}
+
+// Note: The modal styles are already defined in your Deals.scss file, so we don't need to add them again.
+// If you're using the modal in DealDetails, the styles will be applied if both stylesheets are loaded.
+// If there are any style conflicts, you can copy the modal styles from Deals.scss to DealDetails.scss.
