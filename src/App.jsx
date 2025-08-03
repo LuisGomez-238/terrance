@@ -24,7 +24,8 @@ import DocumentViewer from './Pages/LenderDocuments/DocumentViewer';
 import Unauthorized from './Components/Unauthorized/Unauthorized';
 import SalesManagerDashboard from './Components/SalesManager/Dashboard';
 import SalesManagerRoute from './Components/SalesManager/SalesManagerRoute';
-
+import SalesManagerReports from './Components/SalesManager/Reports';
+import FundingStatus from './Components/SalesManager/FundingStatus';
 // Context
 import { AuthProvider } from './AuthContext';
 import { ProfileProvider } from './contexts/ProfileContext';
@@ -80,8 +81,8 @@ function App() {
                 } 
               >
                 <Route path="/sales-dashboard" element={<SalesManagerDashboard />} />
-                <Route path="/sales-reports" element={<div>Reports Coming Soon</div>} />
-                <Route path="/funding-status" element={<div>Funding Status Coming Soon</div>} />
+                <Route path="/sales-reports" element={<SalesManagerReports />} />
+                <Route path="/funding-status" element={<FundingStatus />} />
                 <Route path="/sales-targets" element={<div>Targets Coming Soon</div>} />
               </Route>
             </Routes>

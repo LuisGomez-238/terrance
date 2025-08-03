@@ -131,15 +131,15 @@ function Dashboard() {
         const monthDeals = allDeals.filter(deal => {
           let dealDate;
           try {
-            if (deal.date) {
-              if (deal.date.toDate) {
-                dealDate = deal.date.toDate();
-              } else if (deal.date.seconds) {
-                dealDate = new Date(deal.date.seconds * 1000);
-              } else if (deal.date instanceof Date) {
-                dealDate = deal.date;
-              } else if (typeof deal.date === 'string') {
-                dealDate = new Date(deal.date);
+            if (deal.dateSold) {
+              if (deal.dateSold.toDate) {
+                dealDate = deal.dateSold.toDate();
+              } else if (deal.dateSold.seconds) {
+                dealDate = new Date(deal.dateSold.seconds * 1000);
+              } else if (deal.dateSold instanceof Date) {
+                dealDate = deal.dateSold;
+              } else if (typeof deal.dateSold === 'string') {
+                dealDate = new Date(deal.dateSold);
               } else {
                 return false;
               }
@@ -398,12 +398,24 @@ function Dashboard() {
       // Filter deals by selected month/year
       const dateRange = getMonthDateRange(selectedYear, selectedMonth);
       const monthlyDeals = userDeals.filter(deal => {
-        if (!deal.date && !deal.createdAt) return false;
+        if (!deal.dateSold && !deal.date && !deal.createdAt) return false;
         
         try {
           let dealDate;
-          // First try to use date field
-          if (deal.date) {
+          // First try to use dateSold field (the actual sale date)
+          if (deal.dateSold) {
+            if (deal.dateSold.toDate) {
+              dealDate = deal.dateSold.toDate();
+            } else if (deal.dateSold.seconds) {
+              dealDate = new Date(deal.dateSold.seconds * 1000);
+            } else if (deal.dateSold instanceof Date) {
+              dealDate = deal.dateSold;
+            } else if (typeof deal.dateSold === 'string') {
+              dealDate = new Date(deal.dateSold);
+            }
+          } 
+          // Then try date field
+          else if (deal.date) {
             if (deal.date.toDate) {
               dealDate = deal.date.toDate();
             } else if (deal.date.seconds) {
@@ -413,7 +425,7 @@ function Dashboard() {
             } else if (typeof deal.date === 'string') {
               dealDate = new Date(deal.date);
             }
-          } 
+          }
           // Fallback to createdAt
           else if (deal.createdAt) {
             if (deal.createdAt.toDate) {
