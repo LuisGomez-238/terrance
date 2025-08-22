@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
@@ -79,7 +79,7 @@ function NewDeal() {
     };
     
     fetchLenders();
-  }, []);
+  }, [showLoading, hideLoading]);
   
   // Function to handle product selection changes
   const handleProductSelectionChange = (productId, selected) => {
@@ -181,7 +181,7 @@ function NewDeal() {
     try {
       // Format the selected products with their price, cost, and profit information
       const selectedProductsList = Object.entries(productData)
-        .filter(([_, data]) => data.selected)
+        .filter(([, data]) => data.selected)
         .map(([id, data]) => {
           const productInfo = availableProducts.find(p => p.id === id);
           const soldPrice = parseFloat(data.price) || 0;
@@ -221,7 +221,7 @@ function NewDeal() {
         
         // Deal information
         createdAt: serverTimestamp(),
-        dateSold: dateSold ? new Date(dateSold) : new Date(),
+        dateSold: dateSold ? new Date(dateSold + 'T12:00:00') : new Date(),
         lenderId: selectedLender,
         lenderName: lenders.find(l => l.id === selectedLender)?.name || '',
         isBullet: isBullet,
